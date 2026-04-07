@@ -32,6 +32,26 @@ chmod +x ./bin/xgoup
 ./bin/xgoup init
 ```
 
+## One-line install
+
+macOS / Linux (`curl`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.sh | bash
+```
+
+macOS / Linux (`wget`):
+
+```bash
+wget -qO- https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.sh | bash
+```
+
+Windows (PowerShell):
+
+```powershell
+iwr https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.ps1 -UseBasicParsing | iex
+```
+
 Install a source toolchain (latest from `main`):
 
 ```bash
