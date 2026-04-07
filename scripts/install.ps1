@@ -92,12 +92,17 @@ try {
   Invoke-WebRequest -Uri "$BaseUrl/$asset" -OutFile $archivePath
   Invoke-WebRequest -Uri "$BaseUrl/$checksums" -OutFile $checksumsPath
 
-  $line = Select-String -Path $checksumsPath -Pattern ("\s" + [Regex]::Escape($asset) + "$") | Select-Object -First 1
+  $line = Get-Content -Path $checksumsPath | Where-Object {
+    $parts = ($_ -split '\s+')
+    if ($parts.Count -lt 2) { return $false }
+    $name = $parts[-1] -replace '^[.][/\\]', ''
+    return $name -eq $asset
+  } | Select-Object -First 1
   if (-not $line) {
     Fail "Checksum entry not found for $asset"
   }
 
-  $expected = ($line.Line -split '\s+')[0].ToLowerInvariant()
+  $expected = (($line -split '\s+')[0]).ToLowerInvariant()
   $actual = (Get-FileHash -Path $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
   if ($expected -ne $actual) {
     Fail "Checksum mismatch for $asset"
@@ -106,14 +111,26 @@ try {
   New-Item -ItemType Directory -Force -Path $installDir | Out-Null
   Expand-Archive -Path $archivePath -DestinationPath $tmp -Force
 
-  $bin = Get-ChildItem -Path $tmp -Recurse -File -Filter "xgoup.exe" | Select-Object -First 1
-  if (-not $bin) {
-    Fail "xgoup.exe not found inside archive"
+  $exe = Get-ChildItem -Path $tmp -Recurse -File -Filter "xgoup.exe" | Select-Object -First 1
+  if ($exe) {
+    Copy-Item -Path $exe.FullName -Destination (Join-Path $installDir "xgoup.exe") -Force
+    Log "installed: $(Join-Path $installDir 'xgoup.exe')"
+  } else {
+    $ps1 = Get-ChildItem -Path $tmp -Recurse -File -Filter "xgoup.ps1" | Select-Object -First 1
+    if (-not $ps1) {
+      Fail "Neither xgoup.exe nor xgoup.ps1 found inside archive"
+    }
+    Copy-Item -Path $ps1.FullName -Destination (Join-Path $installDir "xgoup.ps1") -Force
+
+    $cmd = Get-ChildItem -Path $tmp -Recurse -File -Filter "xgoup.cmd" | Select-Object -First 1
+    if ($cmd) {
+      Copy-Item -Path $cmd.FullName -Destination (Join-Path $installDir "xgoup.cmd") -Force
+    } else {
+      Set-Content -Path (Join-Path $installDir "xgoup.cmd") -Value '@echo off' -Encoding ASCII
+      Add-Content -Path (Join-Path $installDir "xgoup.cmd") -Value 'powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0xgoup.ps1" %*' -Encoding ASCII
+    }
+    Log "installed: $(Join-Path $installDir 'xgoup.ps1') + xgoup.cmd"
   }
-
-  Copy-Item -Path $bin.FullName -Destination (Join-Path $installDir "xgoup.exe") -Force
-
-  Log "installed: $(Join-Path $installDir 'xgoup.exe')"
 
   if ($ModifyPath) {
     Add-PathPersist -BinDir $installDir
@@ -122,7 +139,11 @@ try {
     Write-Host "  `$env:PATH = '$installDir;' + `$env:PATH"
   }
 
-  Log "try: & '$installDir\\xgoup.exe' --version"
+  if (Test-Path (Join-Path $installDir "xgoup.exe")) {
+    Log "try: & '$installDir\\xgoup.exe' --version"
+  } else {
+    Log "try: & '$installDir\\xgoup.cmd' --version"
+  }
 }
 finally {
   if (Test-Path $tmp) {

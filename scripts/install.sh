@@ -212,7 +212,7 @@ CHECKSUM_PATH="$TMPDIR/$CHECKSUMS"
 download "$BASE_URL/$ASSET" "$ARCHIVE_PATH"
 download "$BASE_URL/$CHECKSUMS" "$CHECKSUM_PATH"
 
-EXPECTED_SHA="$(awk -v f="$ASSET" '$2 == f {print $1}' "$CHECKSUM_PATH" | head -n 1)"
+EXPECTED_SHA="$(awk -v f="$ASSET" '{n=$2; sub("^\\./","",n); if (n==f) {print $1; exit}}' "$CHECKSUM_PATH")"
 [[ -n "$EXPECTED_SHA" ]] || die "checksum entry not found for $ASSET"
 
 ACTUAL_SHA="$(sha256_file "$ARCHIVE_PATH")"

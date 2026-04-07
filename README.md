@@ -52,6 +52,11 @@ Windows (PowerShell):
 iwr https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.ps1 -UseBasicParsing | iex
 ```
 
+Note:
+
+- `latest` installer mode requires at least one GitHub Release in the repo.
+- If your repo is private, unauthenticated `raw.githubusercontent.com` access may return `404`.
+
 Install a source toolchain (latest from `main`):
 
 ```bash
@@ -101,3 +106,19 @@ Default home: `~/.xgoup` (override with `XGOUP_HOME`)
 - [CLI Spec](./docs/cli-spec.md)
 - [Config Schema](./docs/config-schema.md)
 - [Release Layout](./docs/release-layout.md)
+
+## Release automation
+
+- GitHub Actions workflow: `.github/workflows/release.yml`
+- Trigger:
+  - Push a tag like `v0.1.0`, or
+  - Run workflow manually (`workflow_dispatch`) with a `version` input.
+- Output:
+  - `xgoup-<version>-darwin-amd64.tar.gz`
+  - `xgoup-<version>-darwin-arm64.tar.gz`
+  - `xgoup-<version>-linux-amd64.tar.gz`
+  - `xgoup-<version>-linux-arm64.tar.gz`
+  - `xgoup-<version>-windows-amd64.zip`
+  - `xgoup-<version>-windows-arm64.zip`
+  - `checksums.txt`
+- Windows zip currently contains a wrapper (`xgoup.ps1` + `xgoup.cmd`) and recommends WSL for full functionality.
