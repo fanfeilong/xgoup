@@ -1,106 +1,82 @@
 # xgoup
 
-一个轻量的 `xgo` toolchain 管理脚本，目标是接近 `rustup` 的使用体验：
+A rustup-inspired XGo toolchain manager for macOS, Linux, and Windows.
 
-- `install`: 克隆指定版本并构建
-- `update`: 拉取并重建
-- `default`: 切换默认 toolchain
-- `env`: 输出 `XGOROOT/PATH`
-- `run`: 用默认 toolchain 执行 `xgo`
-- `doctor`: 检查环境是否完整
-- `list`: 列出已安装 toolchain
+## Current status
 
-## 目录约定
+`v0.1` baseline is implemented as a single script: [bin/xgoup](./bin/xgoup)
 
-默认根目录：`~/.xgoup`（可通过 `XGOUP_HOME` 覆盖）
+Supported now:
 
-- `~/.xgoup/toolchains/<name>`: 每个源码 toolchain 的克隆与构建目录
-- `~/.xgoup/current`: 指向默认 toolchain 的软链接
+- `init`
+- `toolchain install` (`standard` / `source` / `linked`)
+- `toolchain update`
+- `toolchain list` (`--json`)
+- `toolchain remove` (`--purge`)
+- `default`
+- `run`
+- `which`
+- `env` (`sh|zsh|fish|powershell`)
+- `doctor`
 
-## 快速开始
+Backward-compatible aliases:
 
-1. 赋予脚本执行权限（已在仓库内设置）
+- `xgoup install ...` -> `xgoup toolchain install ... --method source`
+- `xgoup update ...` -> `xgoup toolchain update ...`
+- `xgoup list` -> `xgoup toolchain list`
+
+## Quick start
 
 ```bash
 chmod +x ./bin/xgoup
+./bin/xgoup init
 ```
 
-2. 安装一个 toolchain（例如 `main` 分支）
+Install a source toolchain (latest from `main`):
 
 ```bash
-./bin/xgoup install main
-```
-
-3. 导出环境变量到当前 shell
-
-```bash
-eval "$(./bin/xgoup env)"
-```
-
-4. 运行 `xgo`
-
-```bash
+./bin/xgoup toolchain install latest --method source --ref main
+./bin/xgoup default latest
 ./bin/xgoup run run main.xgo
 ```
 
-## 常用命令
-
-安装指定 tag：
+Link an existing local XGo source build:
 
 ```bash
-./bin/xgoup install v1.7.0 --ref v1.7.0
+./bin/xgoup toolchain install localdev --method linked --path /path/to/xgo
+./bin/xgoup default localdev
 ```
 
-切换默认版本：
+## Toolchain resolution order
 
-```bash
-./bin/xgoup default v1.7.0
+For `run` / `which` / `env`, xgoup resolves toolchain in this order:
+
+1. `--toolchain <name>`
+2. `XGO_TOOLCHAIN` environment variable
+3. nearest `xgo-toolchain.toml` in current directory or parent directories
+4. global default toolchain from config
+
+Project override file example:
+
+```toml
+toolchain = "latest"
 ```
 
-更新当前默认版本：
+## Home layout
 
-```bash
-./bin/xgoup update
-```
+Default home: `~/.xgoup` (override with `XGOUP_HOME`)
 
-更新指定版本：
+- `toolchains/` toolchain directories
+- `metadata/` per-toolchain metadata (`*.env`)
+- `config.toml` generated config
 
-```bash
-./bin/xgoup update main
-```
+## Notes
 
-查看健康状态：
+- `standard` method on macOS uses Homebrew (`brew install/upgrade xgo`).
+- `standard` method on non-macOS currently falls back to `go install .../cmd/xgo@latest`.
+- `source` method uses `git clone + ./all.bash` and is the recommended path for latest XGo features.
 
-```bash
-./bin/xgoup doctor
-```
-
-列出本地版本：
-
-```bash
-./bin/xgoup list
-```
-
-## 设计说明
-
-- `xgo` 的二进制安装（`go install .../cmd/xgo@latest`）不会自动准备 `XGOROOT`。
-- 本项目按源码目录构建（调用 `./all.bash`），并把源码根目录作为稳定 `XGOROOT`。
-- `run` 子命令会临时注入 `XGOROOT` 与 `PATH`，避免全局环境污染。
-- `env` 子命令输出 `export` 语句，便于你按需 `eval` 到当前 shell。
-
-## 前置条件
-
-- `git`
-- `go`
-- macOS/Linux shell（`bash`）
-
-## 注意事项
-
-- `install --force` 会删除同名目录后重装。
-- `update` 在 detached HEAD 状态下不会自动 `pull`，只会重建当前提交。
-- 首次构建 `./all.bash` 会花一些时间。
-
-## 设计文档
+## Design docs
 
 - [CLI Spec](./docs/cli-spec.md)
 - [Config Schema](./docs/config-schema.md)
