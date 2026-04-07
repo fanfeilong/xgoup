@@ -1,0 +1,300 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+TOOL_HOME="${XGOUP_HOME:-$HOME/.xgoup}"
+TOOLCHAINS_DIR="$TOOL_HOME/toolchains"
+CURRENT_LINK="$TOOL_HOME/current"
+DEFAULT_REPO="https://github.com/goplus/xgo.git"
+
+log() {
+  printf '[xgoup] %s\n' "$*"
+}
+
+err() {
+  printf '[xgoup] ERROR: %s\n' "$*" >&2
+}
+
+die() {
+  err "$*"
+  exit 1
+}
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  xgoup install <name> [--repo <url>] [--ref <git-ref>] [--force]
+  xgoup update [name]
+  xgoup default <name>
+  xgoup env
+  xgoup run <xgo-args...>
+  xgoup doctor
+  xgoup list
+
+Environment:
+  XGOUP_HOME   Toolchain root (default: ~/.xgoup)
+USAGE
+}
+
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "missing required command: $1"
+}
+
+ensure_dirs() {
+  mkdir -p "$TOOLCHAINS_DIR"
+}
+
+resolve_current_dir() {
+  if [[ -L "$CURRENT_LINK" ]]; then
+    readlink "$CURRENT_LINK"
+    return 0
+  fi
+
+  if [[ -d "$CURRENT_LINK" ]]; then
+    printf '%s\n' "$CURRENT_LINK"
+    return 0
+  fi
+
+  return 1
+}
+
+require_current_dir() {
+  local current
+  current="$(resolve_current_dir)" || die "no default toolchain set; run: xgoup default <name>"
+  [[ -d "$current" ]] || die "current toolchain path does not exist: $current"
+  printf '%s\n' "$current"
+}
+
+set_default() {
+  local name="$1"
+  local target="$TOOLCHAINS_DIR/$name"
+
+  [[ -d "$target" ]] || die "toolchain not found: $name"
+  ln -sfn "$target" "$CURRENT_LINK"
+  log "default toolchain set to '$name'"
+}
+
+cmd_install() {
+  require_cmd git
+  require_cmd go
+
+  local name=""
+  local repo="$DEFAULT_REPO"
+  local ref=""
+  local force="0"
+
+  [[ $# -ge 1 ]] || die "install requires <name>"
+  name="$1"
+  shift
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --repo)
+        [[ $# -ge 2 ]] || die "--repo requires a value"
+        repo="$2"
+        shift 2
+        ;;
+      --ref)
+        [[ $# -ge 2 ]] || die "--ref requires a value"
+        ref="$2"
+        shift 2
+        ;;
+      --force)
+        force="1"
+        shift
+        ;;
+      *)
+        die "unknown install option: $1"
+        ;;
+    esac
+  done
+
+  ensure_dirs
+
+  local target="$TOOLCHAINS_DIR/$name"
+  if [[ -e "$target" ]]; then
+    if [[ "$force" == "1" ]]; then
+      rm -rf "$target"
+    else
+      die "toolchain '$name' already exists; use --force to replace"
+    fi
+  fi
+
+  log "cloning $repo -> $target"
+  git clone "$repo" "$target"
+
+  if [[ -n "$ref" ]]; then
+    log "checking out $ref"
+    git -C "$target" checkout "$ref"
+  fi
+
+  log "building toolchain via ./all.bash (this may take a while)"
+  (
+    cd "$target"
+    ./all.bash
+  )
+
+  [[ -x "$target/bin/xgo" ]] || die "build finished but xgo not found at: $target/bin/xgo"
+  log "installed toolchain '$name'"
+
+  if ! resolve_current_dir >/dev/null 2>&1; then
+    ln -sfn "$target" "$CURRENT_LINK"
+    log "no default found, set '$name' as default"
+  fi
+}
+
+cmd_update() {
+  require_cmd git
+  require_cmd go
+
+  local name="${1:-}"
+  local target=""
+
+  if [[ -n "$name" ]]; then
+    target="$TOOLCHAINS_DIR/$name"
+  else
+    target="$(require_current_dir)"
+    name="$(basename "$target")"
+  fi
+
+  [[ -d "$target/.git" ]] || die "toolchain is not a git checkout: $target"
+
+  log "updating '$name'"
+  git -C "$target" fetch --tags --prune
+
+  local branch
+  branch="$(git -C "$target" rev-parse --abbrev-ref HEAD)"
+  if [[ "$branch" != "HEAD" ]]; then
+    git -C "$target" pull --ff-only
+  else
+    log "detached HEAD; skip pull and keep pinned revision"
+  fi
+
+  log "rebuilding via ./all.bash"
+  (
+    cd "$target"
+    ./all.bash
+  )
+
+  [[ -x "$target/bin/xgo" ]] || die "update finished but xgo not found at: $target/bin/xgo"
+  log "updated '$name'"
+}
+
+cmd_default() {
+  [[ $# -eq 1 ]] || die "default requires <name>"
+  set_default "$1"
+}
+
+cmd_env() {
+  local current
+  current="$(require_current_dir)"
+
+  cat <<EOF_ENV
+export XGOROOT="$current"
+export PATH="$current/bin:\$PATH"
+EOF_ENV
+}
+
+cmd_run() {
+  [[ $# -ge 1 ]] || die "run requires xgo arguments, e.g. run run main.xgo"
+
+  local current
+  current="$(require_current_dir)"
+
+  XGOROOT="$current" PATH="$current/bin:$PATH" "$current/bin/xgo" "$@"
+}
+
+cmd_doctor() {
+  local failures=0
+
+  if command -v git >/dev/null 2>&1; then
+    log "git: ok ($(command -v git))"
+  else
+    err "git: missing"
+    failures=$((failures + 1))
+  fi
+
+  if command -v go >/dev/null 2>&1; then
+    log "go: ok ($(command -v go))"
+  else
+    err "go: missing"
+    failures=$((failures + 1))
+  fi
+
+  ensure_dirs
+  log "toolchain home: $TOOL_HOME"
+  log "toolchains dir: $TOOLCHAINS_DIR"
+
+  local current
+  if current="$(resolve_current_dir 2>/dev/null)"; then
+    log "default toolchain: $current"
+    if [[ -x "$current/bin/xgo" ]]; then
+      log "xgo binary: ok ($current/bin/xgo)"
+    else
+      err "xgo binary missing under default toolchain"
+      failures=$((failures + 1))
+    fi
+  else
+    err "default toolchain not configured"
+    failures=$((failures + 1))
+  fi
+
+  if [[ "$failures" -eq 0 ]]; then
+    log "doctor passed"
+  else
+    die "doctor found $failures issue(s)"
+  fi
+}
+
+cmd_list() {
+  ensure_dirs
+
+  local current=""
+  current="$(resolve_current_dir 2>/dev/null || true)"
+
+  shopt -s nullglob
+  local dirs=("$TOOLCHAINS_DIR"/*)
+  shopt -u nullglob
+
+  if [[ ${#dirs[@]} -eq 0 ]]; then
+    log "no installed toolchains"
+    return 0
+  fi
+
+  for d in "${dirs[@]}"; do
+    local name
+    name="$(basename "$d")"
+    if [[ -n "$current" && "$d" == "$current" ]]; then
+      printf '* %s (default)\n' "$name"
+    else
+      printf '* %s\n' "$name"
+    fi
+  done
+}
+
+main() {
+  [[ $# -ge 1 ]] || {
+    usage
+    exit 1
+  }
+
+  local cmd="$1"
+  shift
+
+  case "$cmd" in
+    install) cmd_install "$@" ;;
+    update) cmd_update "$@" ;;
+    default) cmd_default "$@" ;;
+    env) cmd_env "$@" ;;
+    run) cmd_run "$@" ;;
+    doctor) cmd_doctor "$@" ;;
+    list) cmd_list "$@" ;;
+    -h|--help|help) usage ;;
+    *)
+      usage
+      die "unknown command: $cmd"
+      ;;
+  esac
+}
+
+main "$@"
