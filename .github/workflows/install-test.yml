@@ -90,6 +90,33 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Go (Windows)
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Install xgo compiler (Windows)
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = "Stop"
+          go install github.com/goplus/xgo/cmd/xgo@latest
+
+      - name: Build xgoup-init.exe (Windows)
+        if: github.event_name != 'workflow_dispatch'
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = "Stop"
+          $out = Join-Path $env:RUNNER_TEMP "xgoup-init.exe"
+          Push-Location ".\\scripts\\windows\\xgoup-init"
+          try {
+            xgo build -trimpath -ldflags="-s -w" -o $out .
+          } finally {
+            Pop-Location
+          }
+          Write-Host "Built: $out"
+
       - name: Install (Windows / pwsh) via xgoup-init.exe (README)
         if: matrix.shell == 'pwsh'
         shell: pwsh
@@ -100,11 +127,16 @@ jobs:
           $ErrorActionPreference = "Stop"
 
           Write-Host "Shell: $($PSVersionTable.PSVersion)"
-          $exe = Join-Path $env:TEMP "xgoup-init.exe"
-          $url = "https://github.com/${env:GITHUB_REPOSITORY}/releases/latest/download/xgoup-init.exe"
-          Write-Host "Installing via: $url"
-          curl.exe -fsSL $url -o $exe
-          & $exe -version "${{ inputs.version || 'latest' }}" -modify-path=false
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $exe = Join-Path $env:TEMP "xgoup-init.exe"
+            $url = "https://github.com/${env:GITHUB_REPOSITORY}/releases/latest/download/xgoup-init.exe"
+            Write-Host "Installing via: $url"
+            curl.exe -fsSL $url -o $exe
+          } else {
+            $exe = Join-Path $env:RUNNER_TEMP "xgoup-init.exe"
+            Write-Host "Installing via built exe: $exe"
+          }
+          & $exe -repo "${env:GITHUB_REPOSITORY}" -version "${{ inputs.version || 'latest' }}" -modify-path=false
 
       - name: Verify (Windows / pwsh)
         if: matrix.shell == 'pwsh'
@@ -149,11 +181,16 @@ jobs:
           $ErrorActionPreference = "Stop"
 
           Write-Host "Shell: $($PSVersionTable.PSVersion)"
-          $exe = Join-Path $env:TEMP "xgoup-init.exe"
-          $url = "https://github.com/${env:GITHUB_REPOSITORY}/releases/latest/download/xgoup-init.exe"
-          Write-Host "Installing via: $url"
-          curl.exe -fsSL $url -o $exe
-          & $exe -version "${{ inputs.version || 'latest' }}" -modify-path=false
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $exe = Join-Path $env:TEMP "xgoup-init.exe"
+            $url = "https://github.com/${env:GITHUB_REPOSITORY}/releases/latest/download/xgoup-init.exe"
+            Write-Host "Installing via: $url"
+            curl.exe -fsSL $url -o $exe
+          } else {
+            $exe = Join-Path $env:RUNNER_TEMP "xgoup-init.exe"
+            Write-Host "Installing via built exe: $exe"
+          }
+          & $exe -repo "${env:GITHUB_REPOSITORY}" -version "${{ inputs.version || 'latest' }}" -modify-path=false
 
       - name: Verify (Windows / powershell)
         if: matrix.shell == 'powershell'
