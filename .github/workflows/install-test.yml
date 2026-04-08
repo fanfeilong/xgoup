@@ -138,12 +138,13 @@ jobs:
           }
           if (-not $xgoExe) { throw "xgo.exe not found after extraction" }
 
-          $xgoroot = Split-Path -Parent $xgoExe
-          # If xgo.exe is nested, treat its parent as XGOROOT.
+          $xgoBinDir = Split-Path -Parent $xgoExe
+          $xgoroot = if ((Split-Path -Leaf $xgoBinDir) -ieq "bin") { Split-Path -Parent $xgoBinDir } else { $xgoBinDir }
           Write-Host "xgo: $xgoExe"
+          Write-Host "xgo bin: $xgoBinDir"
           Write-Host "XGOROOT: $xgoroot"
 
-          $env:Path = "$xgoroot;$env:Path"
+          $env:Path = "$xgoBinDir;$env:Path"
           Add-Content -Path $env:GITHUB_ENV -Value "Path=$env:Path"
           Add-Content -Path $env:GITHUB_ENV -Value "XGOROOT=$xgoroot"
 
