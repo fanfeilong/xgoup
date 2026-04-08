@@ -93,25 +93,57 @@ jobs:
       - name: Install xgo (Windows)
         if: github.event_name != 'workflow_dispatch'
         shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           Set-StrictMode -Version Latest
           $ErrorActionPreference = "Stop"
 
-          # Install full XGo distribution (includes XGOROOT), not just the cmd/xgo binary.
-          winget install -e --id goplus.xgo --accept-source-agreements --accept-package-agreements
+          # Download a full XGo distribution zip and set XGOROOT explicitly.
+          $headers = @{
+            "Accept" = "application/vnd.github+json"
+            "User-Agent" = "xgoup-ci"
+          }
+          if ($env:GITHUB_TOKEN) {
+            $headers["Authorization"] = "Bearer $($env:GITHUB_TOKEN)"
+          }
 
-          # winget updates User/Machine PATH; this shell still has the old PATH. Refresh it.
-          $machine = [Environment]::GetEnvironmentVariable("Path", "Machine")
-          $user = [Environment]::GetEnvironmentVariable("Path", "User")
-          $env:Path = "$machine;$user"
+          $rel = Invoke-RestMethod -Uri "https://api.github.com/repos/goplus/xgo/releases/latest" -Headers $headers
+          $tag = [string]$rel.tag_name
+          if (-not $tag) { throw "failed to resolve goplus/xgo latest release" }
+          $ver = $tag.TrimStart('v')
 
-          $cmd = Get-Command xgo -ErrorAction Stop
-          Write-Host "xgo: $($cmd.Source)"
+          $arch = $env:PROCESSOR_ARCHITECTURE
+          if ($env:PROCESSOR_ARCHITEW6432) { $arch = $env:PROCESSOR_ARCHITEW6432 }
+          $arch = $arch.ToLowerInvariant()
+          $arch = if ($arch -in @("amd64","x86_64")) { "amd64" } elseif ($arch -eq "arm64") { "arm64" } else { throw "unsupported arch: $arch" }
 
-          $xgoroot = if ($env:XGOROOT) { $env:XGOROOT } else { Split-Path -Parent $cmd.Source }
+          $asset = "xgo$ver.windows-$arch.zip"
+          $url = "https://github.com/goplus/xgo/releases/download/$tag/$asset"
+          Write-Host "Downloading xgo: $url"
+
+          $zip = Join-Path $env:RUNNER_TEMP $asset
+          curl.exe -fsSL $url -o $zip
+
+          $xgoDir = Join-Path $env:RUNNER_TEMP "xgo"
+          if (Test-Path $xgoDir) { Remove-Item -Recurse -Force $xgoDir }
+          New-Item -ItemType Directory -Force -Path $xgoDir | Out-Null
+          tar -xf $zip -C $xgoDir
+
+          # xgo.exe should be at xgoDir\xgo.exe, and XGOROOT should be xgoDir.
+          $xgoExe = Join-Path $xgoDir "xgo.exe"
+          if (-not (Test-Path $xgoExe)) {
+            # Some archives may nest; locate it.
+            $xgoExe = (Get-ChildItem -Path $xgoDir -Recurse -File -Filter "xgo.exe" | Select-Object -First 1).FullName
+          }
+          if (-not $xgoExe) { throw "xgo.exe not found after extraction" }
+
+          $xgoroot = Split-Path -Parent $xgoExe
+          # If xgo.exe is nested, treat its parent as XGOROOT.
+          Write-Host "xgo: $xgoExe"
           Write-Host "XGOROOT: $xgoroot"
 
-          # Later steps start a new shell; persist PATH + XGOROOT for them.
+          $env:Path = "$xgoroot;$env:Path"
           Add-Content -Path $env:GITHUB_ENV -Value "Path=$env:Path"
           Add-Content -Path $env:GITHUB_ENV -Value "XGOROOT=$xgoroot"
 
