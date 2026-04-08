@@ -1,0 +1,108 @@
+name: install-test
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: 'GitHub repo to install from (owner/name)'
+        required: false
+        default: 'fanfeilong/xgoup'
+      version:
+        description: 'Release tag to install (e.g. v0.1.0) or "latest"'
+        required: false
+        default: 'latest'
+  push:
+    paths:
+      - 'scripts/install.sh'
+      - 'scripts/install.ps1'
+      - '.github/workflows/install-test.yml'
+  pull_request:
+    paths:
+      - 'scripts/install.sh'
+      - 'scripts/install.ps1'
+      - '.github/workflows/install-test.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install (macOS/Linux)
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          XGOUP_GITHUB_REPO: ${{ inputs.repo || 'fanfeilong/xgoup' }}
+          XGOUP_INSTALL_VERSION: ${{ inputs.version || 'latest' }}
+        run: |
+          set -euo pipefail
+          chmod +x ./scripts/install.sh
+          ./scripts/install.sh
+
+      - name: Verify (macOS/Linux)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          bin="$HOME/.xgoup/bin/xgoup"
+          echo "Bin: $bin"
+          test -x "$bin"
+          "$bin" --version
+
+      - name: Install (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          XGOUP_GITHUB_REPO: ${{ inputs.repo || 'fanfeilong/xgoup' }}
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = "Stop"
+
+          $version = "${{ inputs.version || 'latest' }}"
+          Write-Host "Installing repo=$env:XGOUP_GITHUB_REPO version=$version"
+
+          pwsh -NoProfile -ExecutionPolicy Bypass -File ".\scripts\install.ps1" -Version $version
+
+      - name: Verify (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = "Stop"
+
+          $bin = Join-Path $env:USERPROFILE ".xgoup\bin"
+          Write-Host "Bin dir: $bin"
+
+          if (Test-Path (Join-Path $bin "xgoup.exe")) {
+            $cmd = (Join-Path $bin "xgoup.exe")
+          } elseif (Test-Path (Join-Path $bin "xgoup.cmd")) {
+            $cmd = (Join-Path $bin "xgoup.cmd")
+          } else {
+            throw "xgoup not found in $bin"
+          }
+
+          $out = & $cmd --version 2>&1
+          $code = $LASTEXITCODE
+
+          $text = ($out | Out-String).Trim()
+          Write-Host $text
+          Write-Host "Exit code: $code"
+
+          # Windows wrapper may return non-zero even when working (bootstrap-only).
+          if ($text -match 'xgoup(-windows-wrapper)?\s+\S+') {
+            exit 0
+          }
+
+          throw "Unexpected output from --version (exit=$code): $text"
+
