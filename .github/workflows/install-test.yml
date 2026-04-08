@@ -100,15 +100,20 @@ jobs:
           # Install full XGo distribution (includes XGOROOT), not just the cmd/xgo binary.
           winget install -e --id goplus.xgo --accept-source-agreements --accept-package-agreements
 
+          # winget updates User/Machine PATH; this shell still has the old PATH. Refresh it.
+          $machine = [Environment]::GetEnvironmentVariable("Path", "Machine")
+          $user = [Environment]::GetEnvironmentVariable("Path", "User")
+          $env:Path = "$machine;$user"
+
           $cmd = Get-Command xgo -ErrorAction Stop
           Write-Host "xgo: $($cmd.Source)"
 
-          if (-not $env:XGOROOT) {
-            $env:XGOROOT = Split-Path -Parent $cmd.Source
-            Write-Host "XGOROOT (guessed): $env:XGOROOT"
-          } else {
-            Write-Host "XGOROOT: $env:XGOROOT"
-          }
+          $xgoroot = if ($env:XGOROOT) { $env:XGOROOT } else { Split-Path -Parent $cmd.Source }
+          Write-Host "XGOROOT: $xgoroot"
+
+          # Later steps start a new shell; persist PATH + XGOROOT for them.
+          Add-Content -Path $env:GITHUB_ENV -Value "Path=$env:Path"
+          Add-Content -Path $env:GITHUB_ENV -Value "XGOROOT=$xgoroot"
 
       - name: Build xgoup-init.exe (Windows)
         if: github.event_name != 'workflow_dispatch'
