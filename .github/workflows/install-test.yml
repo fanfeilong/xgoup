@@ -90,12 +90,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install (Windows) via iwr | iex (README)
-        shell: ${{ matrix.shell }}
+      - name: Install (Windows / pwsh) via iwr | iex (README)
+        if: matrix.shell == 'pwsh'
+        shell: pwsh
         env:
           XGOUP_GITHUB_REPO: ${{ inputs.repo || 'fanfeilong/xgoup' }}
           GITHUB_TOKEN: ${{ github.token }}
-          XGOUP_HOME: ${{ runner.temp }}\xgoup-${{ matrix.shell }}
+          XGOUP_HOME: ${{ runner.temp }}\xgoup-pwsh
         run: |
           Set-StrictMode -Version Latest
           $ErrorActionPreference = "Stop"
@@ -107,13 +108,13 @@ jobs:
           Write-Host "Shell: $($PSVersionTable.PSVersion)"
           Write-Host "Installing via: $url"
 
-          # Use .Content to avoid piping non-text objects into iex.
           iex ((iwr $url -UseBasicParsing -ErrorAction Stop).Content)
 
-      - name: Verify (Windows)
-        shell: ${{ matrix.shell }}
+      - name: Verify (Windows / pwsh)
+        if: matrix.shell == 'pwsh'
+        shell: pwsh
         env:
-          XGOUP_HOME: ${{ runner.temp }}\xgoup-${{ matrix.shell }}
+          XGOUP_HOME: ${{ runner.temp }}\xgoup-pwsh
         run: |
           Set-StrictMode -Version Latest
           $ErrorActionPreference = "Stop"
@@ -136,7 +137,59 @@ jobs:
           Write-Host $text
           Write-Host "Exit code: $code"
 
-          # Windows wrapper may return non-zero even when working (bootstrap-only).
+          if ($text -match 'xgoup(-windows-wrapper)?\s+\S+') {
+            exit 0
+          }
+
+          throw "Unexpected output from --version (exit=$code): $text"
+
+      - name: Install (Windows / powershell) via iwr | iex (README)
+        if: matrix.shell == 'powershell'
+        shell: powershell
+        env:
+          XGOUP_GITHUB_REPO: ${{ inputs.repo || 'fanfeilong/xgoup' }}
+          GITHUB_TOKEN: ${{ github.token }}
+          XGOUP_HOME: ${{ runner.temp }}\xgoup-powershell
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = "Stop"
+
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+          $raw = "https://raw.githubusercontent.com/${env:GITHUB_REPOSITORY}/${env:GITHUB_SHA}"
+          $url = "$raw/scripts/install.ps1"
+          Write-Host "Shell: $($PSVersionTable.PSVersion)"
+          Write-Host "Installing via: $url"
+
+          iex ((iwr $url -UseBasicParsing -ErrorAction Stop).Content)
+
+      - name: Verify (Windows / powershell)
+        if: matrix.shell == 'powershell'
+        shell: powershell
+        env:
+          XGOUP_HOME: ${{ runner.temp }}\xgoup-powershell
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = "Stop"
+
+          $bin = Join-Path $env:XGOUP_HOME "bin"
+          Write-Host "Bin dir: $bin"
+
+          if (Test-Path (Join-Path $bin "xgoup.exe")) {
+            $cmd = (Join-Path $bin "xgoup.exe")
+          } elseif (Test-Path (Join-Path $bin "xgoup.cmd")) {
+            $cmd = (Join-Path $bin "xgoup.cmd")
+          } else {
+            throw "xgoup not found in $bin"
+          }
+
+          $out = & $cmd --version 2>&1
+          $code = $LASTEXITCODE
+
+          $text = ($out | Out-String).Trim()
+          Write-Host $text
+          Write-Host "Exit code: $code"
+
           if ($text -match 'xgoup(-windows-wrapper)?\s+\S+') {
             exit 0
           }
