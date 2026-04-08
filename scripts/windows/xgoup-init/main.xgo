@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -72,6 +73,43 @@ httpGetToFile := func(url, path string) error {
 	return err
 }
 
+getLatestReleaseTag := func(repo string) (string, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo), nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("User-Agent", "xgoup-init")
+	if tok := os.Getenv("GITHUB_TOKEN"); tok != "" {
+		req.Header.Set("Authorization", "Bearer "+tok)
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return "", fmt.Errorf("GET %s: status=%s body=%q", req.URL.String(), resp.Status, string(b))
+	}
+	b, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return "", err
+	}
+	var v struct {
+		Tag string `json:"tag_name"`
+	}
+	if err := json.Unmarshal(b, &v); err != nil {
+		return "", err
+	}
+	if v.Tag == "" {
+		return "", fmt.Errorf("latest release tag_name is empty for %s", repo)
+	}
+	return v.Tag, nil
+}
+
 unzipSelected := func(zipPath, destDir string, want map[string]bool) error {
 	r, err := zip.OpenReader(zipPath)
 	if err != nil {
@@ -137,6 +175,7 @@ getenv := func(k, def string) string {
 repo := flag.String("repo", getenv("XGOUP_GITHUB_REPO", "fanfeilong/xgoup"), "GitHub repo (owner/name)")
 version := flag.String("version", "latest", "release tag (e.g. v0.1.0) or latest")
 modifyPath := flag.Bool("modify-path", true, "add ~/.xgoup/bin to user PATH (best-effort)")
+zipPath := flag.String("zip", "", "install from a local zip file path (skips GitHub download)")
 flag.Parse()
 
 if runtime.GOOS != "windows" {
@@ -159,20 +198,34 @@ if *version != "" && *version != "latest" {
 	tryURLs = append(tryURLs, fmt.Sprintf("https://github.com/%s/releases/download/%s/xgoup-%s-windows-%s.zip", *repo, *version, *version, arch))
 }
 tryURLs = append(tryURLs, stableURL)
+if *version == "latest" {
+	if tag, err := getLatestReleaseTag(*repo); err == nil {
+		tryURLs = append(tryURLs, fmt.Sprintf("https://github.com/%s/releases/download/%s/xgoup-%s-windows-%s.zip", *repo, tag, tag, arch))
+	} else {
+		logf "resolve latest tag failed (will still try stable asset): %v", err
+	}
+}
 
 tmp := filepath.Join(os.TempDir(), fmt.Sprintf("xgoup-%d.zip", time.Now().UnixNano()))
 defer os.Remove(tmp)
 
 var lastErr error
-for _, u := range tryURLs {
-	logf "download: %s", u
-	if err := httpGetToFile(u, tmp); err != nil {
-		lastErr = err
-		logf "download failed: %v", err
-		continue
+if *zipPath != "" {
+	if _, err := os.Stat(*zipPath); err != nil {
+		fail "zip not found: %v", err
 	}
-	lastErr = nil
-	break
+	tmp = *zipPath
+} else {
+	for _, u := range tryURLs {
+		logf "download: %s", u
+		if err := httpGetToFile(u, tmp); err != nil {
+			lastErr = err
+			logf "download failed: %v", err
+			continue
+		}
+		lastErr = nil
+		break
+	}
 }
 if lastErr != nil {
 	fail "%v", lastErr
