@@ -26,14 +26,13 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  unix:
     strategy:
       fail-fast: false
       matrix:
         os:
           - ubuntu-latest
           - macos-latest
-          - windows-latest
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -71,7 +70,6 @@ jobs:
           wget -qO- "$raw/scripts/install.sh" | XGOUP_GITHUB_REPO="${{ inputs.repo || 'fanfeilong/xgoup' }}" XGOUP_INSTALL_VERSION="${{ inputs.version || 'latest' }}" GITHUB_TOKEN="${GITHUB_TOKEN}" bash
 
       - name: Verify (macOS/Linux)
-        if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
@@ -80,29 +78,47 @@ jobs:
           test -x "$bin"
           "$bin" --version
 
+  windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        shell:
+          - pwsh       # PowerShell 7+
+          - powershell # Windows PowerShell 5.1
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Install (Windows) via iwr | iex (README)
-        if: runner.os == 'Windows'
-        shell: pwsh
+        shell: ${{ matrix.shell }}
         env:
           XGOUP_GITHUB_REPO: ${{ inputs.repo || 'fanfeilong/xgoup' }}
           GITHUB_TOKEN: ${{ github.token }}
+          XGOUP_HOME: ${{ runner.temp }}\xgoup-${{ matrix.shell }}
         run: |
           Set-StrictMode -Version Latest
           $ErrorActionPreference = "Stop"
+
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
           $raw = "https://raw.githubusercontent.com/${env:GITHUB_REPOSITORY}/${env:GITHUB_SHA}"
           $url = "$raw/scripts/install.ps1"
+          Write-Host "Shell: $($PSVersionTable.PSVersion)"
           Write-Host "Installing via: $url"
-          iwr $url -UseBasicParsing | iex
+
+          # Use .Content to avoid piping non-text objects into iex.
+          iex ((iwr $url -UseBasicParsing -ErrorAction Stop).Content)
 
       - name: Verify (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
+        shell: ${{ matrix.shell }}
+        env:
+          XGOUP_HOME: ${{ runner.temp }}\xgoup-${{ matrix.shell }}
         run: |
           Set-StrictMode -Version Latest
           $ErrorActionPreference = "Stop"
 
-          $bin = Join-Path $env:USERPROFILE ".xgoup\bin"
+          $bin = Join-Path $env:XGOUP_HOME "bin"
           Write-Host "Bin dir: $bin"
 
           if (Test-Path (Join-Path $bin "xgoup.exe")) {
