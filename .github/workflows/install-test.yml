@@ -90,7 +90,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install (Windows / pwsh) via iwr | iex (README)
+      - name: Install (Windows / pwsh) via curl.exe (README)
         if: matrix.shell == 'pwsh'
         shell: pwsh
         env:
@@ -101,14 +101,15 @@ jobs:
           Set-StrictMode -Version Latest
           $ErrorActionPreference = "Stop"
 
-          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
           $raw = "https://raw.githubusercontent.com/${env:GITHUB_REPOSITORY}/${env:GITHUB_SHA}"
           $url = "$raw/scripts/install.ps1"
+          $ver = "${{ inputs.version || 'latest' }}"
           Write-Host "Shell: $($PSVersionTable.PSVersion)"
           Write-Host "Installing via: $url"
 
-          iex ((iwr $url -UseBasicParsing -ErrorAction Stop).Content)
+          $p = Join-Path $env:TEMP "xgoup-install.ps1"
+          curl.exe -fsSL $url -o $p
+          pwsh -NoProfile -ExecutionPolicy Bypass -File $p -Version $ver
 
       - name: Verify (Windows / pwsh)
         if: matrix.shell == 'pwsh'
@@ -143,7 +144,7 @@ jobs:
 
           throw "Unexpected output from --version (exit=$code): $text"
 
-      - name: Install (Windows / powershell) via iwr | iex (README)
+      - name: Install (Windows / powershell) via curl.exe (README)
         if: matrix.shell == 'powershell'
         shell: powershell
         env:
@@ -154,14 +155,15 @@ jobs:
           Set-StrictMode -Version Latest
           $ErrorActionPreference = "Stop"
 
-          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
           $raw = "https://raw.githubusercontent.com/${env:GITHUB_REPOSITORY}/${env:GITHUB_SHA}"
           $url = "$raw/scripts/install.ps1"
+          $ver = "${{ inputs.version || 'latest' }}"
           Write-Host "Shell: $($PSVersionTable.PSVersion)"
           Write-Host "Installing via: $url"
 
-          iex ((iwr $url -UseBasicParsing -ErrorAction Stop).Content)
+          $p = Join-Path $env:TEMP "xgoup-install.ps1"
+          curl.exe -fsSL $url -o $p
+          powershell -NoProfile -ExecutionPolicy Bypass -File $p -Version $ver
 
       - name: Verify (Windows / powershell)
         if: matrix.shell == 'powershell'

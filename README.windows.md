@@ -4,24 +4,10 @@ This doc is optimized for **copy-resistant** environments (VM consoles, remote b
 
 ## Recommended one-line install
 
-### PowerShell 7+ (pwsh)
+This method uses `curl.exe` to download the script, then runs it from a local file. It's usually more reliable than piping `iwr/irm` into `iex`, and works well on both PowerShell 5.1 and 7+.
 
 ```powershell
-irm https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.ps1 | iex
-```
-
-### Windows PowerShell 5.1 (powershell.exe)
-
-Some Windows PowerShell 5.1 environments behave poorly with `iwr ... | iex`, especially when the downloaded script begins with a `param(...)` block.
-
-Some Windows PowerShell 5.1 environments behave poorly with `iwr ... | iex`, especially when the downloaded script begins with a `param(...)` block.
-
-Use this instead (no `Invoke-Expression`; executes as a ScriptBlock):
-
-```powershell
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$s = (iwr "https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.ps1" -UseBasicParsing -ErrorAction Stop).Content
-& ([ScriptBlock]::Create($s))
+$p="$env:TEMP\xgoup-install.ps1"; curl.exe -fsSL "https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.ps1" -o $p; powershell -NoProfile -ExecutionPolicy Bypass -File $p
 ```
 
 If you need to override version/repo, set env vars before running:

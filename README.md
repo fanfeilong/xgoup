@@ -49,13 +49,7 @@ wget -qO- https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/instal
 Windows (PowerShell):
 
 ```powershell
-# PowerShell 7+ (pwsh)
-irm https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.ps1 | iex
-
-# Windows PowerShell 5.1 (powershell.exe)
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$s = (iwr "https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.ps1" -UseBasicParsing -ErrorAction Stop).Content
-& ([ScriptBlock]::Create($s))
+$p="$env:TEMP\xgoup-install.ps1"; curl.exe -fsSL "https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.ps1" -o $p; powershell -NoProfile -ExecutionPolicy Bypass -File $p
 ```
 
 Note:

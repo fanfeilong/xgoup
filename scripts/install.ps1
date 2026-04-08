@@ -17,22 +17,25 @@ function Fail([string]$Message) {
 }
 
 function Detect-Arch {
-  switch ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()) {
-    "x64" { return "amd64" }
+  # Windows PowerShell 5.1 runs on .NET Framework and may not reliably support
+  # System.Runtime.InteropServices.RuntimeInformation across all images.
+  # Use env vars for broad compatibility.
+  $arch = $env:PROCESSOR_ARCHITECTURE
+  if ($env:PROCESSOR_ARCHITEW6432) {
+    # 32-bit process on 64-bit OS
+    $arch = $env:PROCESSOR_ARCHITEW6432
+  }
+
+  switch (($arch ?? "").ToLowerInvariant()) {
+    "amd64" { return "amd64" }
+    "x86_64" { return "amd64" }
     "arm64" { return "arm64" }
-    default { Fail "Unsupported architecture: $([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)" }
+    default { Fail "Unsupported architecture: $arch" }
   }
 }
 
 function Detect-OS {
-  $isWin = $false
-  if (Get-Variable -Name IsWindows -ErrorAction SilentlyContinue) {
-    $isWin = [bool]$IsWindows
-  } else {
-    $isWin = ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT)
-  }
-  if ($isWin) { return "windows" }
-  Fail "install.ps1 is intended for Windows"
+  return "windows"
 }
 
 function Get-LatestTag([string]$Repository) {
