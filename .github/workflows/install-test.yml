@@ -45,6 +45,7 @@ jobs:
         env:
           XGOUP_GITHUB_REPO: ${{ inputs.repo || 'fanfeilong/xgoup' }}
           XGOUP_INSTALL_VERSION: ${{ inputs.version || 'latest' }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           chmod +x ./scripts/install.sh

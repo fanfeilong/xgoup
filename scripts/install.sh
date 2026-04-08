@@ -54,12 +54,30 @@ download() {
   local out="$2"
 
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "$url" -o "$out"
+    # GitHub API may return 403 for unauthenticated/low-header requests in CI.
+    # When a token is available (e.g. GitHub Actions), use it to avoid rate limits.
+    if [[ "$url" == https://api.github.com/* ]]; then
+      local headers=(-H "Accept: application/vnd.github+json" -H "User-Agent: xgoup-installer")
+      if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+        headers+=(-H "Authorization: Bearer $GITHUB_TOKEN")
+      fi
+      curl -fsSL "${headers[@]}" "$url" -o "$out"
+    else
+      curl -fsSL "$url" -o "$out"
+    fi
     return 0
   fi
 
   if command -v wget >/dev/null 2>&1; then
-    wget -qO "$out" "$url"
+    if [[ "$url" == https://api.github.com/* ]]; then
+      local args=(--header="Accept: application/vnd.github+json" --header="User-Agent: xgoup-installer")
+      if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+        args+=(--header="Authorization: Bearer $GITHUB_TOKEN")
+      fi
+      wget -qO "$out" "${args[@]}" "$url"
+    else
+      wget -qO "$out" "$url"
+    fi
     return 0
   fi
 
