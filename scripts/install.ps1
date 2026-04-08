@@ -37,7 +37,14 @@ function Detect-OS {
 
 function Get-LatestTag([string]$Repository) {
   $api = "https://api.github.com/repos/$Repository/releases/latest"
-  $json = Invoke-RestMethod -Method Get -Uri $api
+  $headers = @{
+    "Accept" = "application/vnd.github+json"
+    "User-Agent" = "xgoup-installer"
+  }
+  if ($env:GITHUB_TOKEN) {
+    $headers["Authorization"] = "Bearer $($env:GITHUB_TOKEN)"
+  }
+  $json = Invoke-RestMethod -Method Get -Uri $api -Headers $headers
   if (-not $json.tag_name) {
     Fail "Failed to resolve latest release tag from $api"
   }

@@ -39,17 +39,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install (macOS/Linux)
+      - name: Install (macOS/Linux) via curl | bash (README)
         if: runner.os != 'Windows'
         shell: bash
         env:
-          XGOUP_GITHUB_REPO: ${{ inputs.repo || 'fanfeilong/xgoup' }}
-          XGOUP_INSTALL_VERSION: ${{ inputs.version || 'latest' }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          chmod +x ./scripts/install.sh
-          ./scripts/install.sh
+          raw="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}"
+          curl -fsSL "$raw/scripts/install.sh" | XGOUP_GITHUB_REPO="${{ inputs.repo || 'fanfeilong/xgoup' }}" XGOUP_INSTALL_VERSION="${{ inputs.version || 'latest' }}" GITHUB_TOKEN="${GITHUB_TOKEN}" bash
+
+      - name: Install (macOS/Linux) via wget | bash (README)
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          raw="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}"
+
+          if ! command -v wget >/dev/null 2>&1; then
+            if [[ "${RUNNER_OS}" == "macOS" ]]; then
+              brew update >/dev/null
+              brew install wget
+            else
+              sudo apt-get update -y
+              sudo apt-get install -y wget
+            fi
+          fi
+
+          wget -qO- "$raw/scripts/install.sh" | XGOUP_GITHUB_REPO="${{ inputs.repo || 'fanfeilong/xgoup' }}" XGOUP_INSTALL_VERSION="${{ inputs.version || 'latest' }}" GITHUB_TOKEN="${GITHUB_TOKEN}" bash
 
       - name: Verify (macOS/Linux)
         if: runner.os != 'Windows'
@@ -61,19 +80,20 @@ jobs:
           test -x "$bin"
           "$bin" --version
 
-      - name: Install (Windows)
+      - name: Install (Windows) via iwr | iex (README)
         if: runner.os == 'Windows'
         shell: pwsh
         env:
           XGOUP_GITHUB_REPO: ${{ inputs.repo || 'fanfeilong/xgoup' }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           Set-StrictMode -Version Latest
           $ErrorActionPreference = "Stop"
 
-          $version = "${{ inputs.version || 'latest' }}"
-          Write-Host "Installing repo=$env:XGOUP_GITHUB_REPO version=$version"
-
-          pwsh -NoProfile -ExecutionPolicy Bypass -File ".\scripts\install.ps1" -Version $version
+          $raw = "https://raw.githubusercontent.com/${env:GITHUB_REPOSITORY}/${env:GITHUB_SHA}"
+          $url = "$raw/scripts/install.ps1"
+          Write-Host "Installing via: $url"
+          iwr $url -UseBasicParsing | iex
 
       - name: Verify (Windows)
         if: runner.os == 'Windows'
