@@ -49,7 +49,13 @@ wget -qO- https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/instal
 Windows (PowerShell):
 
 ```powershell
-iwr https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.ps1 -UseBasicParsing | iex
+# PowerShell 7+ (pwsh)
+irm https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.ps1 | iex
+
+# Windows PowerShell 5.1 (powershell.exe)
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$s = (iwr "https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.ps1" -UseBasicParsing -ErrorAction Stop).Content
+& ([ScriptBlock]::Create($s))
 ```
 
 Note:
