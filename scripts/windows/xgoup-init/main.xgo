@@ -237,6 +237,14 @@ if err := unzipSelected(tmp, binDir, want); err != nil {
 }
 logf "installed: %s", binDir
 
+// Clean up legacy wrapper files so PowerShell resolves xgoup.exe (instead of xgoup.ps1).
+for _, legacy := range []string{"xgoup.ps1", "xgoup.cmd"} {
+	p := filepath.Join(binDir, legacy)
+	if err := os.Remove(p); err == nil {
+		logf "removed legacy: %s", p
+	}
+}
+
 if *modifyPath {
 	if err := addToUserPath(binDir); err != nil {
 		logf "PATH update skipped/failed: %v", err
