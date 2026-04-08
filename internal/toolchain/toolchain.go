@@ -246,7 +246,7 @@ func installLinked(p home.Paths, c config.Config, name string, opt InstallOption
 		XgoBin:       xgo,
 		XgoRootValue: abs,
 		Managed:      "false",
-		Version:      detectVersionFromXgo(xgo),
+		Version:      detectVersionFromXgo(xgo, abs),
 	}
 	if err := meta.Save(p.Metadata, name, m); err != nil {
 		return config.Config{}, err
@@ -303,7 +303,7 @@ func installStandard(p home.Paths, c config.Config, name string, opt InstallOpti
 		XgoBin:       xgoExe,
 		XgoRootValue: xgoroot,
 		Managed:      "true",
-		Version:      detectVersionFromXgo(xgoExe),
+		Version:      detectVersionFromXgo(xgoExe, xgoroot),
 	}
 	if m.Version == "" {
 		m.Version = tag
@@ -377,7 +377,7 @@ func installSource(p home.Paths, c config.Config, name string, opt InstallOption
 		Repo:         repo,
 		Ref:          opt.Ref,
 		Commit:       commit,
-		Version:      detectVersionFromXgo(xgoExe),
+		Version:      detectVersionFromXgo(xgoExe, xgoroot),
 	}
 	if err := meta.Save(p.Metadata, name, m); err != nil {
 		return config.Config{}, err
@@ -418,7 +418,7 @@ func installSourceUpdate(p home.Paths, c config.Config, name string) (config.Con
 	m.RootPath = xgoroot
 	m.XgoBin = xgoExe
 	m.XgoRootValue = xgoroot
-	m.Version = detectVersionFromXgo(xgoExe)
+	m.Version = detectVersionFromXgo(xgoExe, xgoroot)
 	if out, err := exec.Command("git", "-C", tc.Path, "rev-parse", "HEAD").CombinedOutput(); err == nil {
 		m.Commit = strings.TrimSpace(string(out))
 	}
@@ -578,6 +578,7 @@ func findXgoAndRoot(root string) (xgoExe string, xgoRoot string, err error) {
 	if strings.EqualFold(filepath.Base(binDir), "bin") {
 		cand = filepath.Dir(binDir)
 	}
+	// Release zips have pkg/ or src/; a from-source build may only have all.bash at repo root.
 	isValid := func(d string) bool {
 		if d == "" {
 			return false
@@ -589,6 +590,9 @@ func findXgoAndRoot(root string) (xgoExe string, xgoRoot string, err error) {
 			return true
 		}
 		if _, err := os.Stat(filepath.Join(d, "src")); err == nil {
+			return true
+		}
+		if _, err := os.Stat(filepath.Join(d, "all.bash")); err == nil {
 			return true
 		}
 		return false
@@ -608,9 +612,11 @@ func findXgoAndRoot(root string) (xgoExe string, xgoRoot string, err error) {
 
 var errFound = errors.New("found")
 
-func detectVersionFromXgo(xgoExe string) string {
+func detectVersionFromXgo(xgoExe, xgoRoot string) string {
 	// xgo prints version on `version`; ignore errors.
+	// Clear inherited XGOROOT (e.g. user set XGOROOT=C:\) so xgo can resolve its own root.
 	cmd := exec.Command(xgoExe, "version")
+	cmd.Env = envForXgoCLI(xgoRoot)
 	out, _ := cmd.CombinedOutput()
 	s := strings.TrimSpace(string(out))
 	if s == "" {
@@ -621,6 +627,26 @@ func detectVersionFromXgo(xgoExe string) string {
 		return ""
 	}
 	return strings.Join(parts, " ")
+}
+
+// envForXgoCLI returns process env without a bogus XGOROOT, then sets XGOROOT when known.
+func envForXgoCLI(xgoRoot string) []string {
+	out := stripXGOROOTFromEnviron()
+	if xgoRoot != "" {
+		out = append(out, "XGOROOT="+xgoRoot)
+	}
+	return out
+}
+
+func stripXGOROOTFromEnviron() []string {
+	var out []string
+	for _, e := range os.Environ() {
+		if strings.HasPrefix(strings.ToUpper(e), "XGOROOT=") {
+			continue
+		}
+		out = append(out, e)
+	}
+	return out
 }
 
 func findBash() (string, error) {
@@ -651,6 +677,7 @@ func execCmd(dir, exe string, args ...string) error {
 	if dir != "" {
 		cmd.Dir = dir
 	}
+	cmd.Env = stripXGOROOTFromEnviron()
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
