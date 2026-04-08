@@ -26,7 +26,12 @@ function Detect-Arch {
     $arch = $env:PROCESSOR_ARCHITEW6432
   }
 
-  switch (($arch ?? "").ToLowerInvariant()) {
+  $archStr = ""
+  if ($null -ne $arch) {
+    $archStr = [string]$arch
+  }
+
+  switch ($archStr.ToLowerInvariant()) {
     "amd64" { return "amd64" }
     "x86_64" { return "amd64" }
     "arm64" { return "arm64" }
