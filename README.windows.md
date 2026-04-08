@@ -7,7 +7,7 @@ This doc is optimized for **copy-resistant** environments (VM consoles, remote b
 This method uses `curl.exe` to download the script, then runs it from a local file. It's usually more reliable than piping `iwr/irm` into `iex`, and works well on both PowerShell 5.1 and 7+.
 
 ```powershell
-$p="$env:TEMP\xgoup-install.ps1"; curl.exe -fsSL "https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.ps1" -o $p; powershell -NoProfile -ExecutionPolicy Bypass -File $p
+$p="$env:TEMP\xgoup-install.ps1"; curl.exe -fsSL "https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.ps1" -o $p; powershell -NoProfile -ExecutionPolicy Bypass -File $p -ModifyPath; & "$env:USERPROFILE\.xgoup\bin\xgoup.cmd" --version
 ```
 
 If you need to override version/repo, set env vars before running:
