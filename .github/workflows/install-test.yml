@@ -90,17 +90,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Go (Windows)
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.22"
-
-      - name: Install xgo compiler (Windows)
+      - name: Install xgo (Windows)
+        if: github.event_name != 'workflow_dispatch'
         shell: pwsh
         run: |
           Set-StrictMode -Version Latest
           $ErrorActionPreference = "Stop"
-          go install github.com/goplus/xgo/cmd/xgo@latest
+
+          # Install full XGo distribution (includes XGOROOT), not just the cmd/xgo binary.
+          winget install -e --id goplus.xgo --accept-source-agreements --accept-package-agreements
+
+          $cmd = Get-Command xgo -ErrorAction Stop
+          Write-Host "xgo: $($cmd.Source)"
+
+          if (-not $env:XGOROOT) {
+            $env:XGOROOT = Split-Path -Parent $cmd.Source
+            Write-Host "XGOROOT (guessed): $env:XGOROOT"
+          } else {
+            Write-Host "XGOROOT: $env:XGOROOT"
+          }
 
       - name: Build xgoup-init.exe (Windows)
         if: github.event_name != 'workflow_dispatch'

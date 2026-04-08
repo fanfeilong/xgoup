@@ -30,7 +30,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          go install github.com/goplus/xgo/cmd/xgo@latest
+          sudo bash -c 'echo "deb [trusted=yes] https://pkgs.xgo.dev/apt/ /" > /etc/apt/sources.list.d/goplus.list'
+          sudo apt-get update -y
+          sudo apt-get install -y xgo
+          command -v xgo
+          xgo version || true
 
       - name: Resolve version
         id: ver
