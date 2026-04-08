@@ -1,0 +1,350 @@
+import (
+	"encoding/json"
+	"flag"
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+
+	"github.com/fanfeilong/xgoup/internal/buildinfo"
+	"github.com/fanfeilong/xgoup/internal/home"
+	"github.com/fanfeilong/xgoup/internal/resolve"
+	"github.com/fanfeilong/xgoup/internal/selfupdate"
+	"github.com/fanfeilong/xgoup/internal/toolchain"
+)
+
+printUsage := func() {
+	fmt.Println `xgoup - XGo toolchain manager
+
+Usage:
+  xgoup init
+  xgoup toolchain install <name> [--method <standard|source|linked>] [--ref <git-ref>] [--repo <url>] [--path <dir>] [--force]
+  xgoup toolchain update [name]
+  xgoup toolchain list [--json]
+  xgoup toolchain remove <name> [--purge]
+  xgoup default <name>
+  xgoup run [--toolchain <name>] <xgo-args...>
+  xgoup which [--toolchain <name>]
+  xgoup env [--toolchain <name>] [--shell <sh|zsh|fish|powershell>]
+  xgoup doctor
+  xgoup self update
+  xgoup self uninstall [--force]
+
+Compatibility aliases (deprecated):
+  xgoup install ...   -> xgoup toolchain install ... --method source
+  xgoup update ...    -> xgoup toolchain update ...
+  xgoup list          -> xgoup toolchain list
+
+Global options:
+  -h, --help
+  -V, --version`
+}
+
+printVersion := func() {
+	v := buildinfo.Version
+	if v == "" {
+		v = "dev"
+	}
+	fmt.Println "xgoup", v
+}
+
+dieUsage := func(msg string) {
+	fmt.Fprintln os.Stderr, "[xgoup] ERROR:", msg
+	fmt.Fprintln os.Stderr
+	printUsage()
+	os.Exit 2
+}
+
+args := os.Args[1:]
+if len(args) == 0 {
+	printUsage()
+	os.Exit 0
+}
+
+switch args[0] {
+case "-h", "--help", "help":
+	printUsage()
+	os.Exit 0
+case "-V", "--version", "version":
+	printVersion()
+	os.Exit 0
+}
+
+// Compatibility aliases (will be implemented fully later).
+if args[0] == "install" {
+	// xgoup install <name> ... -> toolchain install <name> --method source ...
+	args = append([]string{"toolchain", "install"}, args[1:]...)
+	args = append(args, "--method", "source")
+} else if args[0] == "update" {
+	args = append([]string{"toolchain", "update"}, args[1:]...)
+} else if args[0] == "list" {
+	args = append([]string{"toolchain", "list"}, args[1:]...)
+}
+
+cmd := args[0]
+rest := args[1:]
+
+die := func(err error) {
+	fmt.Fprintln os.Stderr, "[xgoup] ERROR:", err.Error()
+	os.Exit 1
+}
+
+orDefault := func(v, def string) string {
+	if v != "" {
+		return v
+	}
+	return def
+}
+
+execCommand := func(name string, args ...string) *exec.Cmd {
+	return exec.Command(name, args...)
+}
+
+// Global --home override (minimally supported across commands)
+globalHome := ""
+for i := 0; i < len(rest); i++ {
+	if rest[i] == "--home" && i+1 < len(rest) {
+		globalHome = rest[i+1]
+		rest = append(rest[:i], rest[i+2:]...)
+		break
+	}
+}
+if globalHome != "" {
+	_ = os.Setenv("XGOUP_HOME", globalHome)
+}
+
+switch cmd {
+case "init":
+	p, c, err := toolchain.Init()
+	if err != nil {
+		die(err)
+	}
+	_ = p
+	_ = c
+	fmt.Println "[xgoup] initialized home"
+	os.Exit 0
+case "toolchain":
+	if len(rest) == 0 {
+		dieUsage("missing toolchain subcommand")
+	}
+	switch rest[0] {
+	case "install":
+		fs := flag.NewFlagSet("toolchain install", flag.ContinueOnError)
+		method := fs.String("method", "standard", "")
+		repo := fs.String("repo", "", "")
+		ref := fs.String("ref", "", "")
+		path := fs.String("path", "", "")
+		force := fs.Bool("force", false, "")
+		_ = fs.Parse(rest[1:])
+		pos := fs.Args()
+		if len(pos) < 1 {
+			dieUsage("toolchain install requires <name>")
+		}
+		name := pos[0]
+		p, c, err := toolchain.Init()
+		if err != nil {
+			die(err)
+		}
+		_, err = toolchain.Install(p, c, name, toolchain.InstallOptions{
+			Method: *method,
+			Repo:   *repo,
+			Ref:    *ref,
+			Path:   *path,
+			Force:  *force,
+		})
+		if err != nil {
+			die(err)
+		}
+		fmt.Println "[xgoup] installed toolchain", name
+		os.Exit 0
+	case "update":
+		fs := flag.NewFlagSet("toolchain update", flag.ContinueOnError)
+		_ = fs.Parse(rest[1:])
+		pos := fs.Args()
+		name := ""
+		if len(pos) > 0 {
+			name = pos[0]
+		}
+		p, c, err := toolchain.Init()
+		if err != nil {
+			die(err)
+		}
+		_, err = toolchain.Update(p, c, name)
+		if err != nil {
+			die(err)
+		}
+		fmt.Println "[xgoup] updated toolchain", orDefault(name, c.DefaultToolchain)
+		os.Exit 0
+	case "list":
+		fs := flag.NewFlagSet("toolchain list", flag.ContinueOnError)
+		jsonOut := fs.Bool("json", false, "")
+		_ = fs.Parse(rest[1:])
+		p, c, err := toolchain.Init()
+		if err != nil {
+			die(err)
+		}
+		items, err := toolchain.List(p, c)
+		if err != nil {
+			die(err)
+		}
+		if *jsonOut {
+			b, _ := json.Marshal(items)
+			fmt.Println string(b)
+		} else {
+			for _, m := range items {
+				fmt.Printf "%s\t%s\t%s\n", m.Name, m.Kind, m.RootPath
+			}
+		}
+		os.Exit 0
+	case "remove":
+		fs := flag.NewFlagSet("toolchain remove", flag.ContinueOnError)
+		purge := fs.Bool("purge", false, "")
+		_ = fs.Parse(rest[1:])
+		pos := fs.Args()
+		if len(pos) < 1 {
+			dieUsage("toolchain remove requires <name>")
+		}
+		name := pos[0]
+		p, c, err := toolchain.Init()
+		if err != nil {
+			die(err)
+		}
+		_, err = toolchain.Remove(p, c, name, *purge)
+		if err != nil {
+			die(err)
+		}
+		fmt.Println "[xgoup] removed toolchain", name
+		os.Exit 0
+	default:
+		dieUsage("unknown toolchain subcommand: " + rest[0])
+	}
+case "default":
+	if len(rest) < 1 {
+		dieUsage("default requires <name>")
+	}
+	name := rest[0]
+	p, c, err := toolchain.Init()
+	if err != nil {
+		die(err)
+	}
+	_, err = toolchain.SetDefault(p, c, name)
+	if err != nil {
+		die(err)
+	}
+	fmt.Println "[xgoup] default toolchain set to", name
+	os.Exit 0
+case "run":
+	fs := flag.NewFlagSet("run", flag.ContinueOnError)
+	tcn := fs.String("toolchain", "", "")
+	_ = fs.Parse(rest)
+	xgoArgs := fs.Args()
+	if len(xgoArgs) == 0 {
+		dieUsage("run requires <xgo args...>")
+	}
+	p, c, err := toolchain.Init()
+	if err != nil {
+		die(err)
+	}
+	cwd, _ := os.Getwd()
+	r, err := resolve.ResolveToolchain(p, c, *tcn, cwd)
+	if err != nil {
+		die(err)
+	}
+	// exec xgo with injected env
+	cmd := execCommand(r.XgoExe, xgoArgs...)
+	cmd.Env = append(os.Environ(),
+		"XGOROOT="+r.XgoRoot,
+		"PATH="+r.BinDir+string(os.PathListSeparator)+os.Getenv("PATH"),
+	)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	if err := cmd.Run(); err != nil {
+		die(err)
+	}
+	os.Exit 0
+case "which":
+	fs := flag.NewFlagSet("which", flag.ContinueOnError)
+	tcn := fs.String("toolchain", "", "")
+	_ = fs.Parse(rest)
+	p, c, err := toolchain.Init()
+	if err != nil {
+		die(err)
+	}
+	cwd, _ := os.Getwd()
+	r, err := resolve.ResolveToolchain(p, c, *tcn, cwd)
+	if err != nil {
+		die(err)
+	}
+	fmt.Println r.XgoExe
+	os.Exit 0
+case "env":
+	fs := flag.NewFlagSet("env", flag.ContinueOnError)
+	tcn := fs.String("toolchain", "", "")
+	shell := fs.String("shell", "powershell", "")
+	_ = fs.Parse(rest)
+	p, c, err := toolchain.Init()
+	if err != nil {
+		die(err)
+	}
+	cwd, _ := os.Getwd()
+	r, err := resolve.ResolveToolchain(p, c, *tcn, cwd)
+	if err != nil {
+		die(err)
+	}
+	switch *shell {
+	case "powershell":
+		fmt.Printf "$env:XGOROOT = \"%s\"\n", r.XgoRoot
+		fmt.Printf "$env:PATH = \"%s%c\" + $env:PATH\n", r.BinDir, os.PathListSeparator
+	case "sh", "zsh":
+		fmt.Printf "export XGOROOT=\"%s\"\n", r.XgoRoot
+		fmt.Printf "export PATH=\"%s:%s\"\n", r.BinDir, "$PATH"
+	default:
+		dieUsage("unsupported shell: " + *shell)
+	}
+	os.Exit 0
+case "doctor":
+	p, c, err := toolchain.Init()
+	if err != nil {
+		die(err)
+	}
+	if err := toolchain.Doctor(p, c); err != nil {
+		die(err)
+	}
+	fmt.Println "[xgoup] doctor: ok"
+	os.Exit 0
+case "self":
+	if len(rest) == 0 {
+		dieUsage("missing self subcommand")
+	}
+	switch rest[0] {
+	case "update":
+		fs := flag.NewFlagSet("self update", flag.ContinueOnError)
+		repo := fs.String("repo", os.Getenv("XGOUP_GITHUB_REPO"), "")
+		_ = fs.Parse(rest[1:])
+		path, err := selfupdate.Update(selfupdate.Options{Repo: *repo})
+		if err != nil {
+			die(err)
+		}
+		fmt.Println "[xgoup] updated:", path
+		os.Exit 0
+	case "uninstall":
+		fs := flag.NewFlagSet("self uninstall", flag.ContinueOnError)
+		force := fs.Bool("force", false, "")
+		_ = fs.Parse(rest[1:])
+		p, err := home.Resolve()
+		if err != nil {
+			die(err)
+		}
+		if err := selfupdate.Uninstall(p.Home, *force); err != nil {
+			die(err)
+		}
+		fmt.Println "[xgoup] uninstalled home:", p.Home
+		os.Exit 0
+	default:
+		dieUsage("unknown self subcommand: " + rest[0])
+	}
+default:
+	dieUsage("unknown command: " + cmd)
+}
+

@@ -163,6 +163,21 @@ jobs:
           }
           Write-Host "Built: $out"
 
+      - name: Build xgoup.exe (Windows)
+        if: github.event_name != 'workflow_dispatch'
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = "Stop"
+          $out = Join-Path $env:RUNNER_TEMP "xgoup.exe"
+          Push-Location ".\\cmd\\xgoup"
+          try {
+            xgo build -trimpath -ldflags="-s -w" -o $out .
+          } finally {
+            Pop-Location
+          }
+          Write-Host "Built: $out"
+
       - name: Install (Windows / pwsh) via xgoup-init.exe (README)
         if: matrix.shell == 'pwsh'
         shell: pwsh
@@ -176,9 +191,8 @@ jobs:
           # No GitHub Release is guaranteed on push/PR. Create a local zip matching the release payload.
           $zip = Join-Path $env:RUNNER_TEMP "xgoup-local.zip"
           if (Test-Path $zip) { Remove-Item -Force $zip }
-          $ps1 = Join-Path $pwd "scripts\\windows\\xgoup.ps1"
-          $cmd = Join-Path $pwd "scripts\\windows\\xgoup.cmd"
-          Compress-Archive -Path @($ps1,$cmd) -DestinationPath $zip -Force
+          $exe = Join-Path $env:RUNNER_TEMP "xgoup.exe"
+          Compress-Archive -Path @($exe) -DestinationPath $zip -Force
           Write-Host "Local zip: $zip"
           if ("${{ github.event_name }}" -eq "workflow_dispatch") {
             $exe = Join-Path $env:TEMP "xgoup-init.exe"
@@ -218,7 +232,7 @@ jobs:
           Write-Host $text
           Write-Host "Exit code: $code"
 
-          if ($text -match 'xgoup(-windows-wrapper)?\s+\S+') {
+          if ($text -match 'xgoup\s+\S+') {
             exit 0
           }
 
@@ -237,9 +251,8 @@ jobs:
           # No GitHub Release is guaranteed on push/PR. Create a local zip matching the release payload.
           $zip = Join-Path $env:RUNNER_TEMP "xgoup-local.zip"
           if (Test-Path $zip) { Remove-Item -Force $zip }
-          $ps1 = Join-Path $pwd "scripts\\windows\\xgoup.ps1"
-          $cmd = Join-Path $pwd "scripts\\windows\\xgoup.cmd"
-          Compress-Archive -Path @($ps1,$cmd) -DestinationPath $zip -Force
+          $exe = Join-Path $env:RUNNER_TEMP "xgoup.exe"
+          Compress-Archive -Path @($exe) -DestinationPath $zip -Force
           Write-Host "Local zip: $zip"
           if ("${{ github.event_name }}" -eq "workflow_dispatch") {
             $exe = Join-Path $env:TEMP "xgoup-init.exe"
@@ -279,7 +292,7 @@ jobs:
           Write-Host $text
           Write-Host "Exit code: $code"
 
-          if ($text -match 'xgoup(-windows-wrapper)?\s+\S+') {
+          if ($text -match 'xgoup\s+\S+') {
             exit 0
           }
 

@@ -72,14 +72,16 @@ jobs:
             done
           done
 
-          # Windows artifact (wrapper payload)
+          # Windows artifact (native xgoup.exe payload)
           win_stage="$(mktemp -d)"
-          cp scripts/windows/xgoup.ps1 "$win_stage/xgoup.ps1"
-          cp scripts/windows/xgoup.cmd "$win_stage/xgoup.cmd"
+          (cd cmd/xgoup && GOOS=windows GOARCH=amd64 xgo build -trimpath -ldflags="-s -w" -o "$win_stage/xgoup-amd64.exe" .)
+          (cd cmd/xgoup && GOOS=windows GOARCH=arm64 xgo build -trimpath -ldflags="-s -w" -o "$win_stage/xgoup-arm64.exe" .)
           (
             cd "$win_stage"
-            zip -q "$GITHUB_WORKSPACE/$dist/xgoup-${version}-windows-amd64.zip" xgoup.ps1 xgoup.cmd
-            zip -q "$GITHUB_WORKSPACE/$dist/xgoup-${version}-windows-arm64.zip" xgoup.ps1 xgoup.cmd
+            cp xgoup-amd64.exe xgoup.exe
+            zip -q "$GITHUB_WORKSPACE/$dist/xgoup-${version}-windows-amd64.zip" xgoup.exe
+            cp xgoup-arm64.exe xgoup.exe
+            zip -q "$GITHUB_WORKSPACE/$dist/xgoup-${version}-windows-arm64.zip" xgoup.exe
           )
           rm -rf "$win_stage"
 

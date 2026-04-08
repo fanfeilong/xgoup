@@ -57,10 +57,6 @@ Verify:
 
 ```powershell
 $bin = Join-Path $env:USERPROFILE ".xgoup\bin"
-if (Test-Path (Join-Path $bin "xgoup.exe")) {
-  & (Join-Path $bin "xgoup.exe") --version
-} else {
-  & (Join-Path $bin "xgoup.cmd") --version
-}
+& (Join-Path $bin "xgoup.exe") --version
 ```
 

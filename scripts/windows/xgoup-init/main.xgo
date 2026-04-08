@@ -231,7 +231,7 @@ if lastErr != nil {
 	fail "%v", lastErr
 }
 
-want := map[string]bool{"xgoup.ps1": true, "xgoup.cmd": true}
+want := map[string]bool{"xgoup.exe": true}
 if err := unzipSelected(tmp, binDir, want); err != nil {
 	fail "unzip: %v", err
 }
@@ -245,7 +245,7 @@ if *modifyPath {
 	}
 }
 
-cmdPath := filepath.Join(binDir, "xgoup.cmd")
+cmdPath := filepath.Join(binDir, "xgoup.exe")
 logf "try: %s --version", cmdPath
 out, err := exec.Command(cmdPath, "--version").CombinedOutput()
 text := strings.TrimSpace(string(out))

@@ -13,6 +13,7 @@ Write-Host "  3) Use xgoup from your WSL shell" -ForegroundColor Yellow
 
 if ($Args.Count -gt 0 -and ($Args[0] -eq "--version" -or $Args[0] -eq "version")) {
   Write-Output "xgoup-windows-wrapper 0.1.0"
+  exit 0
 }
 
 exit 1
