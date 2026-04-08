@@ -49,7 +49,7 @@ wget -qO- https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/instal
 Windows (PowerShell):
 
 ```powershell
-$p="$env:TEMP\xgoup-install.ps1"; curl.exe -fsSL "https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.ps1" -o $p; powershell -NoProfile -ExecutionPolicy Bypass -File $p -ModifyPath; & "$env:USERPROFILE\.xgoup\bin\xgoup.cmd" --version
+$exe="$env:TEMP\xgoup-init.exe"; curl.exe -fsSL "https://github.com/fanfeilong/xgoup/releases/latest/download/xgoup-init.exe" -o $exe; & $exe
 ```
 
 Note:

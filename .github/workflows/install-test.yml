@@ -90,26 +90,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install (Windows / pwsh) via curl.exe (README)
+      - name: Install (Windows / pwsh) via xgoup-init.exe (README)
         if: matrix.shell == 'pwsh'
         shell: pwsh
         env:
-          XGOUP_GITHUB_REPO: ${{ inputs.repo || 'fanfeilong/xgoup' }}
-          GITHUB_TOKEN: ${{ github.token }}
           XGOUP_HOME: ${{ runner.temp }}\xgoup-pwsh
         run: |
           Set-StrictMode -Version Latest
           $ErrorActionPreference = "Stop"
 
-          $raw = "https://raw.githubusercontent.com/${env:GITHUB_REPOSITORY}/${env:GITHUB_SHA}"
-          $url = "$raw/scripts/install.ps1"
-          $ver = "${{ inputs.version || 'latest' }}"
           Write-Host "Shell: $($PSVersionTable.PSVersion)"
+          $exe = Join-Path $env:TEMP "xgoup-init.exe"
+          $url = "https://github.com/${env:GITHUB_REPOSITORY}/releases/latest/download/xgoup-init.exe"
           Write-Host "Installing via: $url"
-
-          $p = Join-Path $env:TEMP "xgoup-install.ps1"
-          curl.exe -fsSL $url -o $p
-          pwsh -NoProfile -ExecutionPolicy Bypass -File $p -Version $ver
+          curl.exe -fsSL $url -o $exe
+          & $exe -version "${{ inputs.version || 'latest' }}" -modify-path=false
 
       - name: Verify (Windows / pwsh)
         if: matrix.shell == 'pwsh'
@@ -144,26 +139,21 @@ jobs:
 
           throw "Unexpected output from --version (exit=$code): $text"
 
-      - name: Install (Windows / powershell) via curl.exe (README)
+      - name: Install (Windows / powershell) via xgoup-init.exe (README)
         if: matrix.shell == 'powershell'
         shell: powershell
         env:
-          XGOUP_GITHUB_REPO: ${{ inputs.repo || 'fanfeilong/xgoup' }}
-          GITHUB_TOKEN: ${{ github.token }}
           XGOUP_HOME: ${{ runner.temp }}\xgoup-powershell
         run: |
           Set-StrictMode -Version Latest
           $ErrorActionPreference = "Stop"
 
-          $raw = "https://raw.githubusercontent.com/${env:GITHUB_REPOSITORY}/${env:GITHUB_SHA}"
-          $url = "$raw/scripts/install.ps1"
-          $ver = "${{ inputs.version || 'latest' }}"
           Write-Host "Shell: $($PSVersionTable.PSVersion)"
+          $exe = Join-Path $env:TEMP "xgoup-init.exe"
+          $url = "https://github.com/${env:GITHUB_REPOSITORY}/releases/latest/download/xgoup-init.exe"
           Write-Host "Installing via: $url"
-
-          $p = Join-Path $env:TEMP "xgoup-install.ps1"
-          curl.exe -fsSL $url -o $p
-          powershell -NoProfile -ExecutionPolicy Bypass -File $p -Version $ver
+          curl.exe -fsSL $url -o $exe
+          & $exe -version "${{ inputs.version || 'latest' }}" -modify-path=false
 
       - name: Verify (Windows / powershell)
         if: matrix.shell == 'powershell'
