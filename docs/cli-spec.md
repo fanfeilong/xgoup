@@ -22,7 +22,7 @@ Exit codes:
 - `0`: success
 - `1`: generic failure
 
-### `xgoup toolchain install <name>`
+### `xgoup install <name>`
 
 Install toolchain with selected method.
 
@@ -47,7 +47,7 @@ Dependency policy:
 - `xgo` requires **Go >= 1.19** available as `go` on PATH.
 - `standard` install ensures this prerequisite (auto-install Go on Windows via `winget` when missing/outdated).
 
-### `xgoup toolchain update [name]`
+### `xgoup update [name]`
 
 Update one toolchain, or current default if name omitted.
 
@@ -57,7 +57,7 @@ Behavior:
 - `source`: `git fetch --tags --prune` + `pull --ff-only` (if not detached HEAD) + rebuild.
 - `linked`: no-op with warning unless `--rebuild` is supplied.
 
-### `xgoup toolchain list`
+### `xgoup list`
 
 List all registered toolchains with fields:
 
@@ -71,7 +71,11 @@ Output options:
 
 - `--json`
 
-### `xgoup toolchain remove <name>`
+### `xgoup remove <name>`
+Compatibility:
+
+- `xgoup toolchain <install|update|list|remove> ...` is supported as a grouped form.
+
 
 Remove a toolchain registration, optionally delete files.
 
@@ -82,22 +86,6 @@ Options:
 ### `xgoup default <name>`
 
 Set global default toolchain.
-
-### `xgoup run [--toolchain <name>] <xgo args...>`
-
-Run `xgo` with chosen toolchain.
-
-Resolution order:
-
-1. `--toolchain`
-2. `XGO_TOOLCHAIN`
-3. project `xgo-toolchain.toml`
-4. global default
-
-Runtime env injection:
-
-- `XGOROOT=<resolved toolchain root>`
-- prepend `<toolchain>/bin` to `PATH`
 
 ### `xgoup which [--toolchain <name>]`
 

@@ -15,11 +15,13 @@ on:
     paths:
       - 'scripts/install.sh'
       - 'scripts/install.ps1'
+      - '**/*.xgo'
       - '.github/workflows/install-test.yml'
   pull_request:
     paths:
       - 'scripts/install.sh'
       - 'scripts/install.ps1'
+      - '**/*.xgo'
       - '.github/workflows/install-test.yml'
 
 permissions:

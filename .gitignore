@@ -1,2 +1,5 @@
 # Local build artifacts
 /xgoup
+
+# xgo generated files
+**/xgo_autogen.go

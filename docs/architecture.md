@@ -13,6 +13,6 @@ Shell installers (`scripts/install.sh`, `scripts/install.ps1`) remain thin wrapp
 ## xgo vs Go
 
 - **Entry**: `cmd/xgoup/main.xgo` is written in **XGo** and built with `xgo build`.
-- **Libraries**: `internal/*` are **XGo** sources (`*.xgo`). `xgo build` emits `xgo_autogen.go` per package (same pattern as the main package). Check in both `.xgo` and generated `xgo_autogen.go` so CI and `go test ./...` work without an extra codegen step when the repo is already generated.
+- **Libraries**: `internal/*` are **XGo** sources (`*.xgo`). `xgo build` emits `xgo_autogen.go` per package (same pattern as the main package). Generated `xgo_autogen.go` is **not committed**; CI and local development should run `xgo build ./...` before `go test ./...`.
 
 If you add new commands, extend `cmd/xgoup/main.xgo` and put reusable logic under `internal/<pkg>/<pkg>.xgo`.

@@ -33,14 +33,14 @@ xgoup init
 Install a toolchain:
 
 ```bash
-xgoup toolchain install latest --method source --ref main
+xgoup install latest --method source --ref main
 xgoup default latest
 ```
 
 Run your XGo program using the selected toolchain:
 
 ```bash
-xgoup run run main.xgo
+xgo run main.xgo
 ```
 
 Link an existing local XGo build:
@@ -55,22 +55,17 @@ xgoup default localdev
 Supported now:
 
 - `init`
-- `toolchain install` (`standard` / `source` / `linked`)
-- `toolchain update`
-- `toolchain list` (`--json`)
-- `toolchain remove` (`--purge`)
+- `install` (`standard` / `source` / `linked`)
+- `update`
+- `list` (`--json`)
+- `remove` (`--purge`)
 - `default`
-- `run`
 - `which`
 - `env` (`sh|zsh|fish|powershell`)
 - `doctor`
 - `doc` (open XGo spec / classfile / docs / demo / tutorial in browser)
 
-Backward-compatible aliases:
-
-- `xgoup install ...` -> `xgoup toolchain install ... --method source`
-- `xgoup update ...` -> `xgoup toolchain update ...`
-- `xgoup list` -> `xgoup toolchain list`
+Also available (grouped form): `xgoup toolchain <install|update|list|remove> ...`
 
 ### Toolchain resolution order
 

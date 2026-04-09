@@ -31,24 +31,25 @@ usage() {
   cat <<'USAGE'
 Usage:
   xgoup init
+  xgoup install <name> [--method <standard|source|linked>] [--ref <git-ref>] [--repo <url>] [--path <dir>] [--force]
+  xgoup update [name]
+  xgoup list [--json]
+  xgoup remove <name> [--purge]
   xgoup toolchain install <name> [--method <standard|source|linked>] [--ref <git-ref>] [--repo <url>] [--path <dir>] [--force]
   xgoup toolchain update [name]
   xgoup toolchain list [--json]
   xgoup toolchain remove <name> [--purge]
   xgoup default <name>
-  xgoup run [--toolchain <name>] <xgo-args...>
   xgoup which [--toolchain <name>]
   xgoup env [--toolchain <name>] [--shell <sh|zsh|fish|powershell>]
   xgoup doctor
 
-Compatibility aliases (deprecated):
-  xgoup install ...   -> xgoup toolchain install ... --method source
-  xgoup update ...    -> xgoup toolchain update ...
-  xgoup list          -> xgoup toolchain list
+Compatibility aliases:
+  xgoup toolchain <subcmd>  (kept for grouping; top-level commands are preferred)
 
 Environment:
   XGOUP_HOME       Home directory (default: ~/.xgoup)
-  XGO_TOOLCHAIN    Runtime toolchain override for `run`/`which`/`env`
+  XGO_TOOLCHAIN    Runtime toolchain override for `which`/`env`
 USAGE
 }
 
@@ -697,38 +698,6 @@ cmd_env() {
   esac
 }
 
-cmd_run() {
-  local toolchain=""
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      --toolchain)
-        [[ $# -ge 2 ]] || die "--toolchain requires value"
-        toolchain="$2"
-        shift 2
-        ;;
-      --)
-        shift
-        break
-        ;;
-      *)
-        break
-        ;;
-    esac
-  done
-
-  [[ $# -ge 1 ]] || die "run requires xgo arguments, e.g. xgoup run run main.xgo"
-
-  resolve_exec_context "$toolchain"
-  local bin_dir
-  bin_dir="$(dirname "$XGO_BIN")"
-
-  if [[ -n "$XGOROOT_VALUE" ]]; then
-    XGOROOT="$XGOROOT_VALUE" PATH="$bin_dir:$PATH" "$XGO_BIN" "$@"
-  else
-    PATH="$bin_dir:$PATH" "$XGO_BIN" "$@"
-  fi
-}
-
 cmd_doctor() {
   local failures=0
 
@@ -800,9 +769,9 @@ cmd_toolchain() {
 }
 
 cmd_install_alias() {
-  warn "'xgoup install' is deprecated; use: xgoup toolchain install <name> --method source"
+  warn "'xgoup install' is now preferred; `xgoup toolchain install` is kept for grouping"
   [[ $# -ge 1 ]] || die "install requires <name>"
-  cmd_toolchain_install "$1" --method source "${@:2}"
+  cmd_toolchain_install "$@"
 }
 
 cmd_update_alias() {
@@ -828,13 +797,13 @@ main() {
     init) cmd_init "$@" ;;
     toolchain) cmd_toolchain "$@" ;;
     default) cmd_default "$@" ;;
-    run) cmd_run "$@" ;;
     which) cmd_which "$@" ;;
     env) cmd_env "$@" ;;
     doctor) cmd_doctor "$@" ;;
     install) cmd_install_alias "$@" ;;
     update) cmd_update_alias "$@" ;;
     list) cmd_list_alias "$@" ;;
+    remove) cmd_toolchain_remove "$@" ;;
     -V|--version) echo "$XGOUP_VERSION" ;;
     -h|--help|help) usage ;;
     *)
