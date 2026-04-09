@@ -4,6 +4,7 @@ package main
 
 import (
 	"archive/zip"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -17,315 +18,420 @@ import (
 )
 
 const _ = true
-//line main.xgo:15
+//line main.xgo:16
 func main() {
-//line main.xgo:15:1
-	fail := func(msg string, args ...interface{}) {
 //line main.xgo:16:1
-		fmt.Fprintf(os.Stderr, "[xgoup-init] ERROR: "+msg+"\n", args...) 
+	fail := func(msg string, args ...interface{}) {
 //line main.xgo:17:1
+		fmt.Fprintf(os.Stderr, "[xgoup-init] ERROR: "+msg+"\n", args...) 
+//line main.xgo:18:1
 		os.Exit(1)
 	}
-//line main.xgo:20:1
-	logf := func(msg string, args ...interface{}) {
 //line main.xgo:21:1
+	logf := func(msg string, args ...interface{}) {
+//line main.xgo:22:1
 		fmt.Printf("[xgoup-init] "+msg+"\n", args...)
 	}
-//line main.xgo:24:1
-	detectArch := func() (string, error) {
 //line main.xgo:25:1
-		switch runtime.GOARCH {
+	detectArch := func() (string, error) {
 //line main.xgo:26:1
-		case "amd64":
+		switch runtime.GOARCH {
 //line main.xgo:27:1
-			return "amd64", nil
+		case "amd64":
 //line main.xgo:28:1
-		case "arm64":
+			return "amd64", nil
 //line main.xgo:29:1
-			return "arm64", nil
+		case "arm64":
 //line main.xgo:30:1
-		default:
+			return "arm64", nil
 //line main.xgo:31:1
+		default:
+//line main.xgo:32:1
 			return "", fmt.Errorf("unsupported arch: %s", runtime.GOARCH)
 		}
 	}
-//line main.xgo:35:1
-	defaultHome := func() string {
 //line main.xgo:36:1
-		home := os.Getenv("XGOUP_HOME")
+	defaultHome := func() string {
 //line main.xgo:37:1
-		if home != "" {
+		home := os.Getenv("XGOUP_HOME")
 //line main.xgo:38:1
+		if home != "" {
+//line main.xgo:39:1
 			return home
 		}
-//line main.xgo:40:1
-		up := os.Getenv("USERPROFILE")
 //line main.xgo:41:1
-		if up == "" {
+		up := os.Getenv("USERPROFILE")
 //line main.xgo:42:1
+		if up == "" {
+//line main.xgo:43:1
 			return filepath.Join(os.TempDir(), ".xgoup")
 		}
-//line main.xgo:44:1
+//line main.xgo:45:1
 		return filepath.Join(up, ".xgoup")
 	}
-//line main.xgo:47:1
-	httpGetToFile := func(url string, path string) error {
 //line main.xgo:48:1
-		req, err := http.NewRequest("GET", url, nil)
+	httpGetToFile := func(url string, path string) error {
 //line main.xgo:49:1
-		if err != nil {
+		req, err := http.NewRequest("GET", url, nil)
 //line main.xgo:50:1
-			return err
-		}
-//line main.xgo:52:1
-		req.Header.Set("User-Agent", "xgoup-init")
-//line main.xgo:53:1
-		req.Header.Set("Accept", "application/octet-stream")
-//line main.xgo:55:1
-		client := &http.Client{Timeout: 60 * time.Second}
-//line main.xgo:56:1
-		resp, err := client.Do(req)
-//line main.xgo:57:1
 		if err != nil {
-//line main.xgo:58:1
+//line main.xgo:51:1
 			return err
 		}
-//line main.xgo:60:1
-		defer resp.Body.Close()
+//line main.xgo:53:1
+		req.Header.Set("User-Agent", "xgoup-init")
+//line main.xgo:54:1
+		req.Header.Set("Accept", "application/octet-stream")
+//line main.xgo:56:1
+		client := &http.Client{Timeout: 60 * time.Second}
+//line main.xgo:57:1
+		resp, err := client.Do(req)
+//line main.xgo:58:1
+		if err != nil {
+//line main.xgo:59:1
+			return err
+		}
 //line main.xgo:61:1
-		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		defer resp.Body.Close()
 //line main.xgo:62:1
-			b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
 //line main.xgo:63:1
+			b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+//line main.xgo:64:1
 			return fmt.Errorf("GET %s: status=%s body=%q", url, resp.Status, string(b))
 		}
-//line main.xgo:66:1
-		f, err := os.Create(path)
 //line main.xgo:67:1
-		if err != nil {
+		f, err := os.Create(path)
 //line main.xgo:68:1
+		if err != nil {
+//line main.xgo:69:1
 			return err
 		}
-//line main.xgo:70:1
-		defer f.Close()
 //line main.xgo:71:1
-		_, err = io.Copy(f, resp.Body)
+		defer f.Close()
 //line main.xgo:72:1
+		_, err = io.Copy(f, resp.Body)
+//line main.xgo:73:1
 		return err
 	}
-//line main.xgo:75:1
-	unzipSelected := func(zipPath string, destDir string, want map[string]bool) error {
 //line main.xgo:76:1
-		r, err := zip.OpenReader(zipPath)
+	getLatestReleaseTag := func(repo string) (string, error) {
 //line main.xgo:77:1
-		if err != nil {
+		req, err := http.NewRequest("GET", fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo), nil)
 //line main.xgo:78:1
-			return err
+		if err != nil {
+//line main.xgo:79:1
+			return "", err
 		}
-//line main.xgo:80:1
-		defer r.Close()
+//line main.xgo:81:1
+		req.Header.Set("Accept", "application/vnd.github+json")
 //line main.xgo:82:1
-		if
-//line main.xgo:82:1
-		err := os.MkdirAll(destDir, 0o755); err != nil {
+		req.Header.Set("User-Agent", "xgoup-init")
 //line main.xgo:83:1
+		if
+//line main.xgo:83:1
+		tok := os.Getenv("GITHUB_TOKEN"); tok != "" {
+//line main.xgo:84:1
+			req.Header.Set("Authorization", "Bearer "+tok)
+		}
+//line main.xgo:87:1
+		client := &http.Client{Timeout: 30 * time.Second}
+//line main.xgo:88:1
+		resp, err := client.Do(req)
+//line main.xgo:89:1
+		if err != nil {
+//line main.xgo:90:1
+			return "", err
+		}
+//line main.xgo:92:1
+		defer resp.Body.Close()
+//line main.xgo:93:1
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+//line main.xgo:94:1
+			b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+//line main.xgo:95:1
+			return "", fmt.Errorf("GET %s: status=%s body=%q", req.URL.String(), resp.Status, string(b))
+		}
+//line main.xgo:97:1
+		b, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+//line main.xgo:98:1
+		if err != nil {
+//line main.xgo:99:1
+			return "", err
+		}
+//line main.xgo:101:1
+		var v struct {
+			Tag string `json:"tag_name"`
+		}
+//line main.xgo:104:1
+		if
+//line main.xgo:104:1
+		err := json.Unmarshal(b, &v); err != nil {
+//line main.xgo:105:1
+			return "", err
+		}
+//line main.xgo:107:1
+		if v.Tag == "" {
+//line main.xgo:108:1
+			return "", fmt.Errorf("latest release tag_name is empty for %s", repo)
+		}
+//line main.xgo:110:1
+		return v.Tag, nil
+	}
+//line main.xgo:113:1
+	unzipSelected := func(zipPath string, destDir string, want map[string]bool) error {
+//line main.xgo:114:1
+		r, err := zip.OpenReader(zipPath)
+//line main.xgo:115:1
+		if err != nil {
+//line main.xgo:116:1
 			return err
 		}
-//line main.xgo:86:1
+//line main.xgo:118:1
+		defer r.Close()
+//line main.xgo:120:1
+		if
+//line main.xgo:120:1
+		err := os.MkdirAll(destDir, 0o755); err != nil {
+//line main.xgo:121:1
+			return err
+		}
+//line main.xgo:124:1
 		found := map[string]bool{}
 		for
-//line main.xgo:87:1
+//line main.xgo:125:1
 		_, f := range r.File {
-//line main.xgo:88:1
+//line main.xgo:126:1
 			name := filepath.Base(strings.ReplaceAll(f.Name, "\\", "/"))
-//line main.xgo:89:1
+//line main.xgo:127:1
 			if !want[name] {
-//line main.xgo:90:1
+//line main.xgo:128:1
 				continue
 			}
-//line main.xgo:92:1
+//line main.xgo:130:1
 			rc, err := f.Open()
-//line main.xgo:93:1
+//line main.xgo:131:1
 			if err != nil {
-//line main.xgo:94:1
+//line main.xgo:132:1
 				return err
 			}
-//line main.xgo:96:1
+//line main.xgo:134:1
 			outPath := filepath.Join(destDir, name)
-//line main.xgo:97:1
+//line main.xgo:135:1
 			out, err := os.Create(outPath)
-//line main.xgo:98:1
+//line main.xgo:136:1
 			if err != nil {
-//line main.xgo:99:1
+//line main.xgo:137:1
 				rc.Close()
-//line main.xgo:100:1
+//line main.xgo:138:1
 				return err
 			}
-//line main.xgo:102:1
+//line main.xgo:140:1
 			if
-//line main.xgo:102:1
+//line main.xgo:140:1
 			_, err := io.Copy(out, rc); err != nil {
-//line main.xgo:103:1
+//line main.xgo:141:1
 				out.Close()
-//line main.xgo:104:1
+//line main.xgo:142:1
 				rc.Close()
-//line main.xgo:105:1
+//line main.xgo:143:1
 				return err
 			}
-//line main.xgo:107:1
+//line main.xgo:145:1
 			out.Close()
-//line main.xgo:108:1
+//line main.xgo:146:1
 			rc.Close()
-//line main.xgo:109:1
+//line main.xgo:147:1
 			found[name] = true
 		}
 		for
-//line main.xgo:112:1
+//line main.xgo:150:1
 		k := range want {
-//line main.xgo:113:1
+//line main.xgo:151:1
 			if !found[k] {
-//line main.xgo:114:1
+//line main.xgo:152:1
 				return fmt.Errorf("missing %q in zip", k)
 			}
 		}
-//line main.xgo:117:1
+//line main.xgo:155:1
 		return nil
 	}
-//line main.xgo:120:1
+//line main.xgo:158:1
 	addToUserPath := func(binDir string) error {
-//line main.xgo:121:1
+//line main.xgo:159:1
 		ps := fmt.Sprintf(`[Environment]::SetEnvironmentVariable("Path", (([Environment]::GetEnvironmentVariable("Path","User") + ";%s").Trim(";")), "User")`, strings.ReplaceAll(binDir, `"`, `""`))
-//line main.xgo:122:1
+//line main.xgo:160:1
 		cmd := exec.Command("powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps)
-//line main.xgo:123:1
+//line main.xgo:161:1
 		out, err := cmd.CombinedOutput()
-//line main.xgo:124:1
+//line main.xgo:162:1
 		if err != nil {
-//line main.xgo:125:1
+//line main.xgo:163:1
 			return fmt.Errorf("powershell PATH update: %w (%s)", err, strings.TrimSpace(string(out)))
 		}
-//line main.xgo:127:1
+//line main.xgo:165:1
 		return nil
 	}
-//line main.xgo:130:1
+//line main.xgo:168:1
 	getenv := func(k string, def string) string {
-//line main.xgo:131:1
+//line main.xgo:169:1
 		if
-//line main.xgo:131:1
+//line main.xgo:169:1
 		v := os.Getenv(k); v != "" {
-//line main.xgo:132:1
+//line main.xgo:170:1
 			return v
 		}
-//line main.xgo:134:1
+//line main.xgo:172:1
 		return def
 	}
-//line main.xgo:137:1
+//line main.xgo:175:1
 	repo := flag.String("repo", getenv("XGOUP_GITHUB_REPO", "fanfeilong/xgoup"), "GitHub repo (owner/name)")
-//line main.xgo:138:1
+//line main.xgo:176:1
 	version := flag.String("version", "latest", "release tag (e.g. v0.1.0) or latest")
-//line main.xgo:139:1
+//line main.xgo:177:1
 	modifyPath := flag.Bool("modify-path", true, "add ~/.xgoup/bin to user PATH (best-effort)")
-//line main.xgo:140:1
+//line main.xgo:178:1
+	zipPath := flag.String("zip", "", "install from a local zip file path (skips GitHub download)")
+//line main.xgo:179:1
 	flag.Parse()
-//line main.xgo:142:1
+//line main.xgo:181:1
 	if runtime.GOOS != "windows" {
-//line main.xgo:143:1
+//line main.xgo:182:1
 		fail("xgoup-init.exe is intended for Windows")
 	}
-//line main.xgo:146:1
+//line main.xgo:185:1
 	arch, err := detectArch()
-//line main.xgo:147:1
+//line main.xgo:186:1
 	if err != nil {
-//line main.xgo:148:1
+//line main.xgo:187:1
 		fail("%v", err)
 	}
-//line main.xgo:151:1
+//line main.xgo:190:1
 	home := defaultHome()
-//line main.xgo:152:1
+//line main.xgo:191:1
 	binDir := filepath.Join(home, "bin")
-//line main.xgo:155:1
+//line main.xgo:194:1
 	stableURL := fmt.Sprintf("https://github.com/%s/releases/%s/download/xgoup-windows-%s.zip", *repo, "latest", arch)
-//line main.xgo:157:1
+//line main.xgo:196:1
 	tryURLs := []string{}
-//line main.xgo:158:1
+//line main.xgo:197:1
 	if *version != "" && *version != "latest" {
-//line main.xgo:159:1
+//line main.xgo:198:1
 		tryURLs = append(tryURLs, fmt.Sprintf("https://github.com/%s/releases/download/%s/xgoup-%s-windows-%s.zip", *repo, *version, *version, arch))
 	}
-//line main.xgo:161:1
+//line main.xgo:200:1
 	tryURLs = append(tryURLs, stableURL)
-//line main.xgo:163:1
-	tmp := filepath.Join(os.TempDir(), fmt.Sprintf("xgoup-%d.zip", time.Now().UnixNano()))
-//line main.xgo:164:1
-	defer os.Remove(tmp)
-//line main.xgo:166:1
-	var lastErr error
-	for
-//line main.xgo:167:1
-	_, u := range tryURLs {
-//line main.xgo:168:1
-		logf("download: %s", u)
-//line main.xgo:169:1
+//line main.xgo:201:1
+	if *version == "latest" {
+//line main.xgo:202:1
 		if
-//line main.xgo:169:1
-		err := httpGetToFile(u, tmp); err != nil {
-//line main.xgo:170:1
-			lastErr = err
-//line main.xgo:171:1
-			logf("download failed: %v", err)
-//line main.xgo:172:1
-			continue
+//line main.xgo:202:1
+		tag, err := getLatestReleaseTag(*repo); err == nil {
+//line main.xgo:203:1
+			tryURLs = append(tryURLs, fmt.Sprintf("https://github.com/%s/releases/download/%s/xgoup-%s-windows-%s.zip", *repo, tag, tag, arch))
+		} else {
+//line main.xgo:205:1
+			logf("resolve latest tag failed (will still try stable asset): %v", err)
 		}
-//line main.xgo:174:1
-		lastErr = nil
-//line main.xgo:175:1
-		break
 	}
-//line main.xgo:177:1
+//line main.xgo:209:1
+	tmp := filepath.Join(os.TempDir(), fmt.Sprintf("xgoup-%d.zip", time.Now().UnixNano()))
+//line main.xgo:210:1
+	defer os.Remove(tmp)
+//line main.xgo:212:1
+	var lastErr error
+//line main.xgo:213:1
+	if *zipPath != "" {
+//line main.xgo:214:1
+		if
+//line main.xgo:214:1
+		_, err := os.Stat(*zipPath); err != nil {
+//line main.xgo:215:1
+			fail("zip not found: %v", err)
+		}
+//line main.xgo:217:1
+		tmp = *zipPath
+	} else {
+		for
+//line main.xgo:219:1
+		_, u := range tryURLs {
+//line main.xgo:220:1
+			logf("download: %s", u)
+//line main.xgo:221:1
+			if
+//line main.xgo:221:1
+			err := httpGetToFile(u, tmp); err != nil {
+//line main.xgo:222:1
+				lastErr = err
+//line main.xgo:223:1
+				logf("download failed: %v", err)
+//line main.xgo:224:1
+				continue
+			}
+//line main.xgo:226:1
+			lastErr = nil
+//line main.xgo:227:1
+			break
+		}
+	}
+//line main.xgo:230:1
 	if lastErr != nil {
-//line main.xgo:178:1
+//line main.xgo:231:1
 		fail("%v", lastErr)
 	}
-//line main.xgo:181:1
-	want := map[string]bool{"xgoup.ps1": true, "xgoup.cmd": true}
-//line main.xgo:182:1
+//line main.xgo:234:1
+	want := map[string]bool{"xgoup.exe": true}
+//line main.xgo:235:1
 	if
-//line main.xgo:182:1
+//line main.xgo:235:1
 	err := unzipSelected(tmp, binDir, want); err != nil {
-//line main.xgo:183:1
+//line main.xgo:236:1
 		fail("unzip: %v", err)
 	}
-//line main.xgo:185:1
+//line main.xgo:238:1
 	logf("installed: %s", binDir)
-//line main.xgo:187:1
-	if *modifyPath {
-//line main.xgo:188:1
+	for
+//line main.xgo:241:1
+	_, legacy := range []string{"xgoup.ps1", "xgoup.cmd"} {
+//line main.xgo:242:1
+		p := filepath.Join(binDir, legacy)
+//line main.xgo:243:1
 		if
-//line main.xgo:188:1
+//line main.xgo:243:1
+		err := os.Remove(p); err == nil {
+//line main.xgo:244:1
+			logf("removed legacy: %s", p)
+		}
+	}
+//line main.xgo:248:1
+	if *modifyPath {
+//line main.xgo:249:1
+		if
+//line main.xgo:249:1
 		err := addToUserPath(binDir); err != nil {
-//line main.xgo:189:1
+//line main.xgo:250:1
 			logf("PATH update skipped/failed: %v", err)
 		} else {
-//line main.xgo:191:1
+//line main.xgo:252:1
 			logf("updated user PATH")
 		}
 	}
-//line main.xgo:195:1
-	cmdPath := filepath.Join(binDir, "xgoup.cmd")
-//line main.xgo:196:1
+//line main.xgo:256:1
+	cmdPath := filepath.Join(binDir, "xgoup.exe")
+//line main.xgo:257:1
 	logf("try: %s --version", cmdPath)
-//line main.xgo:197:1
+//line main.xgo:258:1
 	out, err := exec.Command(cmdPath, "--version").CombinedOutput()
-//line main.xgo:198:1
+//line main.xgo:259:1
 	text := strings.TrimSpace(string(out))
-//line main.xgo:199:1
+//line main.xgo:260:1
 	if text != "" {
-//line main.xgo:200:1
+//line main.xgo:261:1
 		fmt.Println(text)
 	}
-//line main.xgo:202:1
+//line main.xgo:263:1
 	if err != nil {
-//line main.xgo:203:1
+//line main.xgo:264:1
 		logf("xgoup exit: %v", err)
 	}
 }

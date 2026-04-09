@@ -4,13 +4,16 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/fanfeilong/xgoup/internal/buildinfo"
 	"github.com/fanfeilong/xgoup/internal/home"
+	"github.com/fanfeilong/xgoup/internal/meta"
 	"github.com/fanfeilong/xgoup/internal/resolve"
 	"github.com/fanfeilong/xgoup/internal/selfupdate"
 	"github.com/fanfeilong/xgoup/internal/toolchain"
+	"github.com/fanfeilong/xgoup/internal/userenv"
 )
 
 printUsage := func() {
@@ -22,7 +25,7 @@ Usage:
   xgoup toolchain update [name]
   xgoup toolchain list [--json]
   xgoup toolchain remove <name> [--purge]
-  xgoup default <name>
+  xgoup default <name> [--persist-user-xgoroot]
   xgoup run [--toolchain <name>] <xgo-args...>
   xgoup which [--toolchain <name>]
   xgoup env [--toolchain <name>] [--shell <sh|zsh|fish|powershell>]
@@ -219,10 +222,14 @@ case "toolchain":
 		dieUsage("unknown toolchain subcommand: " + rest[0])
 	}
 case "default":
-	if len(rest) < 1 {
+	fs := flag.NewFlagSet("default", flag.ContinueOnError)
+	persist := fs.Bool("persist-user-xgoroot", false, "set Windows user env XGOROOT to this toolchain root (new terminals only)")
+	_ = fs.Parse(rest)
+	pos := fs.Args()
+	if len(pos) < 1 {
 		dieUsage("default requires <name>")
 	}
-	name := rest[0]
+	name := pos[0]
 	p, c, err := toolchain.Init()
 	if err != nil {
 		die(err)
@@ -231,7 +238,28 @@ case "default":
 	if err != nil {
 		die(err)
 	}
+	m, err := meta.Load(p.Metadata, name)
+	if err != nil {
+		die(err)
+	}
+	root := m.XgoRootValue
+	if root == "" {
+		root = m.RootPath
+	}
 	fmt.Println "[xgoup] default toolchain set to", name
+	fmt.Println "[xgoup] XGOROOT for this toolchain:", root
+	if *persist {
+		if runtime.GOOS != "windows" {
+			fmt.Fprintln os.Stderr, "[xgoup] WARN: --persist-user-xgoroot is only supported on Windows; ignored"
+		} else {
+			if err := userenv.SetUserXGOROOT(root); err != nil {
+				die(err)
+			}
+			fmt.Println "[xgoup] persisted user env XGOROOT (open a new terminal to see it)"
+		}
+	} else {
+		fmt.Println "[xgoup] hint: open a new shell after --persist-user-xgoroot, or run: xgoup env --shell powershell"
+	}
 	os.Exit 0
 case "run":
 	fs := flag.NewFlagSet("run", flag.ContinueOnError)
