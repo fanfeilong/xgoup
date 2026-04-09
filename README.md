@@ -4,7 +4,7 @@ A rustup-inspired XGo toolchain manager for macOS, Linux, and Windows.
 
 ## Current status
 
-`v0.1` baseline is implemented as a single script: [bin/xgoup](./bin/xgoup)
+`v0.1.8` baseline is implemented as a single script: [bin/xgoup](./bin/xgoup)
 
 Supported now:
 

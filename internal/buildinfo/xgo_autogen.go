@@ -4,7 +4,7 @@ package buildinfo
 
 const _ = true
 // These can be overridden via -ldflags at build time.
-var Version = "0.1.0"
+var Version = "0.1.8"
 // These can be overridden via -ldflags at build time.
 var Commit = ""
 // These can be overridden via -ldflags at build time.
