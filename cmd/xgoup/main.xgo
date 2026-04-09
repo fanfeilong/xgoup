@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/fanfeilong/xgoup/internal/bootstrap"
 	"github.com/fanfeilong/xgoup/internal/buildinfo"
 	"github.com/fanfeilong/xgoup/internal/home"
 	"github.com/fanfeilong/xgoup/internal/meta"
@@ -29,6 +30,7 @@ Usage:
   xgoup which [--toolchain <name>]
   xgoup env [--toolchain <name>] [--shell <sh|zsh|fish|powershell>]
   xgoup doctor
+  xgoup self install [--repo <owner/name>] [--version latest|vX.Y.Z] [--modify-path] [--zip <path>]
   xgoup self update
   xgoup self uninstall [--force]
 
@@ -93,6 +95,13 @@ die := func(err error) {
 
 orDefault := func(v, def string) string {
 	if v != "" {
+		return v
+	}
+	return def
+}
+
+getenv := func(k, def string) string {
+	if v := os.Getenv(k); v != "" {
 		return v
 	}
 	return def
@@ -336,6 +345,26 @@ case "self":
 		dieUsage("missing self subcommand")
 	}
 	switch rest[0] {
+	case "install":
+		fs := flag.NewFlagSet("self install", flag.ContinueOnError)
+		repo := fs.String("repo", getenv("XGOUP_GITHUB_REPO", "fanfeilong/xgoup"), "")
+		version := fs.String("version", "latest", "")
+		modifyPath := fs.Bool("modify-path", true, "")
+		zipPath := fs.String("zip", "", "")
+		_ = fs.Parse(rest[1:])
+		err := bootstrap.Install(bootstrap.Options{
+			Repo:       *repo,
+			Version:    *version,
+			ZipPath:    *zipPath,
+			ModifyPath: *modifyPath,
+			Logf: func(format string, args ...any) {
+				fmt.Printf(format+"\n", args...)
+			},
+		})
+		if err != nil {
+			die(err)
+		}
+		os.Exit(0)
 	case "update":
 		fs := flag.NewFlagSet("self update", flag.ContinueOnError)
 		repo := fs.String("repo", os.Getenv("XGOUP_GITHUB_REPO"), "")

@@ -89,11 +89,6 @@ jobs:
           cp "$dist/xgoup-${version}-windows-amd64.zip" "$dist/xgoup-windows-amd64.zip"
           cp "$dist/xgoup-${version}-windows-arm64.zip" "$dist/xgoup-windows-arm64.zip"
 
-          # Windows bootstrapper (rustup-init.exe style)
-          (cd scripts/windows/xgoup-init && GOOS=windows GOARCH=amd64 xgo build -trimpath -ldflags="-s -w" -o "$GITHUB_WORKSPACE/$dist/xgoup-init-windows-amd64.exe" .)
-          (cd scripts/windows/xgoup-init && GOOS=windows GOARCH=arm64 xgo build -trimpath -ldflags="-s -w" -o "$GITHUB_WORKSPACE/$dist/xgoup-init-windows-arm64.exe" .)
-          cp "$dist/xgoup-init-windows-amd64.exe" "$dist/xgoup-init.exe"
-
           # checksums
           (
             cd "$dist"

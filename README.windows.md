@@ -1,62 +1,19 @@
 # xgoup on Windows
 
-This doc is optimized for **copy-resistant** environments (VM consoles, remote browsers). It includes a reliable one-line installer and quick diagnostics when the one-liner fails.
+Install is done by the **same** `xgoup.exe` as macOS/Linux: use **`xgoup self install`** to copy the release binary into `%USERPROFILE%\.xgoup\bin` and update PATH.
 
-## Recommended one-line install
-
-This method uses `curl.exe` to download the script, then runs it from a local file. It's usually more reliable than piping `iwr/irm` into `iex`, and works well on both PowerShell 5.1 and 7+.
+## One-line style (download release zip, then install)
 
 ```powershell
-$exe="$env:TEMP\xgoup-init.exe"; curl.exe -fsSL "https://github.com/fanfeilong/xgoup/releases/latest/download/xgoup-init.exe" -o $exe; & $exe
+$zip="$env:TEMP\xgoup-win.zip"
+curl.exe -fsSL "https://github.com/fanfeilong/xgoup/releases/latest/download/xgoup-windows-amd64.zip" -o $zip
+$d="$env:TEMP\xgoup-extract"; if (Test-Path $d) { Remove-Item -Recurse -Force $d }
+Expand-Archive -Path $zip -DestinationPath $d -Force
+& "$d\xgoup.exe" self install -modify-path=true
 ```
 
-If you need to override version/repo, set env vars before running:
+Open a **new** PowerShell window, then `xgoup --version`.
 
-```powershell
-$env:XGOUP_GITHUB_REPO="fanfeilong/xgoup"
-$env:GITHUB_TOKEN=""   # optional, helps avoid GitHub API rate limits
-$env:XGOUP_HOME="$env:USERPROFILE\.xgoup"
-```
+## Environment
 
-## Quick diagnostics (when it still fails)
-
-### 1) Confirm you can fetch the script content
-
-```powershell
-$r=iwr "https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.ps1" -UseBasicParsing -ErrorAction Stop
-$r.StatusCode
-$r.Headers["Content-Type"]
-$r.RawContentLength
-```
-
-Expected: `200`, a text content-type, and a non-zero `RawContentLength`.
-
-### 2) Check whether you got HTML instead of the script
-
-```powershell
-$r=iwr "https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.ps1" -UseBasicParsing -ErrorAction Stop
-$r.Content.Substring(0,[Math]::Min(120,$r.Content.Length))
-```
-
-If you see `<html` / `<!doctype html>`, a proxy/security gateway is intercepting `raw.githubusercontent.com`.
-
-### 3) Download to a file and run (most robust)
-
-```powershell
-$p="$env:TEMP\xgoup-install.ps1"
-iwr "https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.ps1" -UseBasicParsing -ErrorAction Stop -OutFile $p
-powershell -NoProfile -ExecutionPolicy Bypass -File $p
-```
-
-## After install: verify
-
-Default install location:
-- `C:\Users\<you>\.xgoup\bin`
-
-Verify:
-
-```powershell
-$bin = Join-Path $env:USERPROFILE ".xgoup\bin"
-& (Join-Path $bin "xgoup.exe") --version
-```
-
+Optional: `setx` / user env is updated by `xgoup default` (see main README). Prefer `xgoup run` / `xgoup env` when automating.

@@ -148,21 +148,6 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "Path=$env:Path"
           Add-Content -Path $env:GITHUB_ENV -Value "XGOROOT=$xgoroot"
 
-      - name: Build xgoup-init.exe (Windows)
-        if: github.event_name != 'workflow_dispatch'
-        shell: pwsh
-        run: |
-          Set-StrictMode -Version Latest
-          $ErrorActionPreference = "Stop"
-          $out = Join-Path $env:RUNNER_TEMP "xgoup-init.exe"
-          Push-Location ".\\scripts\\windows\\xgoup-init"
-          try {
-            xgo build -trimpath -ldflags="-s -w" -o $out .
-          } finally {
-            Pop-Location
-          }
-          Write-Host "Built: $out"
-
       - name: Build xgoup.exe (Windows)
         if: github.event_name != 'workflow_dispatch'
         shell: pwsh
@@ -178,7 +163,7 @@ jobs:
           }
           Write-Host "Built: $out"
 
-      - name: Install (Windows / pwsh) via xgoup-init.exe (README)
+      - name: Install (Windows / pwsh) via xgoup self install
         if: matrix.shell == 'pwsh'
         shell: pwsh
         env:
@@ -188,22 +173,18 @@ jobs:
           $ErrorActionPreference = "Stop"
 
           Write-Host "Shell: $($PSVersionTable.PSVersion)"
-          # No GitHub Release is guaranteed on push/PR. Create a local zip matching the release payload.
-          $zip = Join-Path $env:RUNNER_TEMP "xgoup-local.zip"
-          if (Test-Path $zip) { Remove-Item -Force $zip }
           $exe = Join-Path $env:RUNNER_TEMP "xgoup.exe"
-          Compress-Archive -Path @($exe) -DestinationPath $zip -Force
-          Write-Host "Local zip: $zip"
+          $localZip = Join-Path $env:RUNNER_TEMP "xgoup-local.zip"
           if ("${{ github.event_name }}" -eq "workflow_dispatch") {
-            $exe = Join-Path $env:TEMP "xgoup-init.exe"
-            $url = "https://github.com/${env:GITHUB_REPOSITORY}/releases/latest/download/xgoup-init.exe"
-            Write-Host "Installing via: $url"
-            curl.exe -fsSL $url -o $exe
+            $zip = Join-Path $env:RUNNER_TEMP "xgoup-release.zip"
+            curl.exe -fsSL "https://github.com/${env:GITHUB_REPOSITORY}/releases/latest/download/xgoup-windows-amd64.zip" -o $zip
           } else {
-            $exe = Join-Path $env:RUNNER_TEMP "xgoup-init.exe"
-            Write-Host "Installing via built exe: $exe"
+            if (Test-Path $localZip) { Remove-Item -Force $localZip }
+            Compress-Archive -Path @($exe) -DestinationPath $localZip -Force
+            $zip = $localZip
           }
-          & $exe -repo "${env:GITHUB_REPOSITORY}" -version "${{ inputs.version || 'latest' }}" -modify-path=false -zip $zip
+          Write-Host "Install zip: $zip"
+          & $exe self install -repo "${env:GITHUB_REPOSITORY}" -version "${{ inputs.version || 'latest' }}" -modify-path=false -zip $zip
 
       - name: Verify (Windows / pwsh)
         if: matrix.shell == 'pwsh'
@@ -238,7 +219,7 @@ jobs:
 
           throw "Unexpected output from --version (exit=$code): $text"
 
-      - name: Install (Windows / powershell) via xgoup-init.exe (README)
+      - name: Install (Windows / powershell) via xgoup self install
         if: matrix.shell == 'powershell'
         shell: powershell
         env:
@@ -248,22 +229,18 @@ jobs:
           $ErrorActionPreference = "Stop"
 
           Write-Host "Shell: $($PSVersionTable.PSVersion)"
-          # No GitHub Release is guaranteed on push/PR. Create a local zip matching the release payload.
-          $zip = Join-Path $env:RUNNER_TEMP "xgoup-local.zip"
-          if (Test-Path $zip) { Remove-Item -Force $zip }
           $exe = Join-Path $env:RUNNER_TEMP "xgoup.exe"
-          Compress-Archive -Path @($exe) -DestinationPath $zip -Force
-          Write-Host "Local zip: $zip"
+          $localZip = Join-Path $env:RUNNER_TEMP "xgoup-local.zip"
           if ("${{ github.event_name }}" -eq "workflow_dispatch") {
-            $exe = Join-Path $env:TEMP "xgoup-init.exe"
-            $url = "https://github.com/${env:GITHUB_REPOSITORY}/releases/latest/download/xgoup-init.exe"
-            Write-Host "Installing via: $url"
-            curl.exe -fsSL $url -o $exe
+            $zip = Join-Path $env:RUNNER_TEMP "xgoup-release.zip"
+            curl.exe -fsSL "https://github.com/${env:GITHUB_REPOSITORY}/releases/latest/download/xgoup-windows-amd64.zip" -o $zip
           } else {
-            $exe = Join-Path $env:RUNNER_TEMP "xgoup-init.exe"
-            Write-Host "Installing via built exe: $exe"
+            if (Test-Path $localZip) { Remove-Item -Force $localZip }
+            Compress-Archive -Path @($exe) -DestinationPath $localZip -Force
+            $zip = $localZip
           }
-          & $exe -repo "${env:GITHUB_REPOSITORY}" -version "${{ inputs.version || 'latest' }}" -modify-path=false -zip $zip
+          Write-Host "Install zip: $zip"
+          & $exe self install -repo "${env:GITHUB_REPOSITORY}" -version "${{ inputs.version || 'latest' }}" -modify-path=false -zip $zip
 
       - name: Verify (Windows / powershell)
         if: matrix.shell == 'powershell'

@@ -46,15 +46,23 @@ macOS / Linux (`wget`):
 wget -qO- https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.sh | bash
 ```
 
-Windows (PowerShell):
+Windows (PowerShell) — download the release zip, extract `xgoup.exe`, then install into `%USERPROFILE%\.xgoup\bin`:
 
 ```powershell
-$exe="$env:TEMP\xgoup-init.exe"; curl.exe -fsSL "https://github.com/fanfeilong/xgoup/releases/latest/download/xgoup-init.exe" -o $exe; & $exe
+$zip="$env:TEMP\xgoup-win.zip"; curl.exe -fsSL "https://github.com/fanfeilong/xgoup/releases/latest/download/xgoup-windows-amd64.zip" -o $zip
+Expand-Archive -Path $zip -DestinationPath $env:TEMP\xgoup-extract -Force
+& "$env:TEMP\xgoup-extract\xgoup.exe" self install -modify-path=true
+```
+
+Alternatively, if you already have `xgoup.exe` on disk (e.g. current directory):
+
+```powershell
+.\xgoup.exe self install -modify-path=true
 ```
 
 Note:
 
-- `latest` installer mode requires at least one GitHub Release in the repo.
+- `self install` requires at least one GitHub Release in the repo (or use `-zip` with a local zip in CI).
 - If your repo is private, unauthenticated `raw.githubusercontent.com` access may return `404`.
 
 Install a source toolchain (latest from `main`):
@@ -106,6 +114,7 @@ Default home: `~/.xgoup` (override with `XGOUP_HOME`)
 - [CLI Spec](./docs/cli-spec.md)
 - [Config Schema](./docs/config-schema.md)
 - [Release Layout](./docs/release-layout.md)
+- [Architecture](./docs/architecture.md)
 
 ## Release automation
 
@@ -121,4 +130,4 @@ Default home: `~/.xgoup` (override with `XGOUP_HOME`)
   - `xgoup-<version>-windows-amd64.zip`
   - `xgoup-<version>-windows-arm64.zip`
   - `checksums.txt`
-- Windows zip currently contains a wrapper (`xgoup.ps1` + `xgoup.cmd`) and recommends WSL for full functionality.
+- Windows zip contains the native `xgoup.exe` binary (use `xgoup self install` after download).
