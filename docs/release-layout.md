@@ -62,9 +62,7 @@ Each archive contains:
 
 ## 5. PATH Policy
 
-- Do not silently mutate shell files by default.
-- Print explicit instructions.
-- Optional `--modify-path` flag for opt-in automation.
+- By default, installers add `~/.xgoup/bin` to user PATH (opt-out on Unix with `--no-modify-path`).
 
 ## 6. Channels and Latest Source
 

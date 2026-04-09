@@ -7,7 +7,7 @@ VERSION="${XGOUP_INSTALL_VERSION:-latest}"
 BASE_URL="${XGOUP_RELEASE_BASE_URL:-}"
 HOME_DIR="${XGOUP_HOME:-$HOME/.xgoup}"
 INSTALL_DIR="$HOME_DIR/bin"
-MODIFY_PATH="false"
+MODIFY_PATH="true"
 
 usage() {
   cat <<'USAGE'
@@ -21,7 +21,8 @@ Options:
   --repo <owner/name>   GitHub repo. Default: fanfeilong/xgoup
   --base-url <url>      Override release base URL (must contain artifacts + checksums.txt)
   --home <dir>          Install home directory. Default: ~/.xgoup
-  --modify-path         Append PATH export to shell rc file (opt-in)
+  --modify-path         Append PATH export to shell rc file
+  --no-modify-path      Do not modify shell rc file (print instructions only)
   -h, --help            Show this help
 
 Environment:
@@ -187,6 +188,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --modify-path)
       MODIFY_PATH="true"
+      shift
+      ;;
+    --no-modify-path)
+      MODIFY_PATH="false"
       shift
       ;;
     -h|--help)

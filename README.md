@@ -12,6 +12,12 @@ A rustup-inspired XGo toolchain manager for macOS, Linux, and Windows.
 curl -fsSL https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.sh | bash
 ```
 
+To skip PATH modification (print instructions only):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.sh | bash -s -- --no-modify-path
+```
+
 **Windows**
 
 ```bat
