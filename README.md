@@ -2,9 +2,55 @@
 
 A rustup-inspired XGo toolchain manager for macOS, Linux, and Windows.
 
-## Current status
+## Install
 
-`v0.1.8` baseline is implemented as a single script: [bin/xgoup](./bin/xgoup)
+### One-line install
+
+**macOS / Linux**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.sh | bash
+```
+
+**Windows**
+
+```bat
+curl.exe -fsSL "https://github.com/fanfeilong/xgoup/releases/latest/download/xgoup-windows-amd64.zip" -o "%TEMP%\xgoup-win.zip" && tar -xf "%TEMP%\xgoup-win.zip" -C "%TEMP%" && "%TEMP%\xgoup.exe" self install -modify-path=true
+```
+
+```powershell
+$zip="$env:TEMP\xgoup-win.zip"; curl.exe -fsSL "https://github.com/fanfeilong/xgoup/releases/latest/download/xgoup-windows-amd64.zip" -o $zip; $d=Join-Path $env:TEMP xgoup-extract; Remove-Item -Recurse -Force $d -ErrorAction SilentlyContinue; Expand-Archive -Path $zip -DestinationPath $d -Force; & (Join-Path $d xgoup.exe) self install -modify-path=true
+```
+
+Note: `xgo` requires **Go >= 1.19** on PATH. `xgoup toolchain install --method standard` will auto-install Go when missing/outdated (Windows: `winget`; macOS: `brew`; Linux: `apt/dnf/yum/apk/pacman`).
+
+## Quick start (after install)
+
+```bash
+xgoup init
+```
+
+Install a toolchain:
+
+```bash
+xgoup toolchain install latest --method source --ref main
+xgoup default latest
+```
+
+Run your XGo program using the selected toolchain:
+
+```bash
+xgoup run run main.xgo
+```
+
+Link an existing local XGo build:
+
+```bash
+xgoup toolchain install localdev --method linked --path /path/to/xgo
+xgoup default localdev
+```
+
+## Commands
 
 Supported now:
 
@@ -26,49 +72,7 @@ Backward-compatible aliases:
 - `xgoup update ...` -> `xgoup toolchain update ...`
 - `xgoup list` -> `xgoup toolchain list`
 
-## Quick start
-
-```bash
-chmod +x ./bin/xgoup
-./bin/xgoup init
-```
-
-## One-line install
-
-**macOS / Linux**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.sh | bash
-```
-
-**Windows**
-
-```bat
-curl.exe -fsSL "https://github.com/fanfeilong/xgoup/releases/latest/download/xgoup-windows-amd64.zip" -o "%TEMP%\xgoup-win.zip" && tar -xf "%TEMP%\xgoup-win.zip" -C "%TEMP%" && "%TEMP%\xgoup.exe" self install -modify-path=true
-```
-
-```powershell
-$zip="$env:TEMP\xgoup-win.zip"; curl.exe -fsSL "https://github.com/fanfeilong/xgoup/releases/latest/download/xgoup-windows-amd64.zip" -o $zip; $d=Join-Path $env:TEMP xgoup-extract; Remove-Item -Recurse -Force $d -ErrorAction SilentlyContinue; Expand-Archive -Path $zip -DestinationPath $d -Force; & (Join-Path $d xgoup.exe) self install -modify-path=true
-```
-
-Note: `xgo` requires **Go >= 1.19** on PATH. `xgoup toolchain install --method standard` will auto-install Go when missing/outdated (Windows: `winget`; macOS: `brew`; Linux: `apt/dnf/yum/apk/pacman`).
-
-Install a source toolchain (latest from `main`):
-
-```bash
-./bin/xgoup toolchain install latest --method source --ref main
-./bin/xgoup default latest
-./bin/xgoup run run main.xgo
-```
-
-Link an existing local XGo source build:
-
-```bash
-./bin/xgoup toolchain install localdev --method linked --path /path/to/xgo
-./bin/xgoup default localdev
-```
-
-## Toolchain resolution order
+### Toolchain resolution order
 
 For `run` / `which` / `env`, xgoup resolves toolchain in this order:
 
@@ -93,9 +97,17 @@ Default home: `~/.xgoup` (override with `XGOUP_HOME`)
 
 ## Notes
 
-- `standard` method on macOS uses Homebrew (`brew install/upgrade xgo`).
-- `standard` method on non-macOS currently falls back to `go install .../cmd/xgo@latest`.
+- `standard` method is platform-specific (macOS: Homebrew; Windows: official release zip; Linux: distro package manager when available).
 - `source` method uses `git clone + ./all.bash` and is the recommended path for latest XGo features.
+
+## Development (run from repo checkout)
+
+If you didn't install `xgoup` yet, you can run it from this repo:
+
+```bash
+chmod +x ./bin/xgoup
+./bin/xgoup init
+```
 
 ## Design docs
 
