@@ -44,7 +44,7 @@ curl -fsSL https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/insta
 **Windows**
 
 ```bat
-curl.exe -fsSL "https://github.com/fanfeilong/xgoup/releases/latest/download/xgoup-windows-amd64.zip" -o "%TEMP%\xgoup-win.zip" && tar -xf "%TEMP%\xgoup-win.zip" -C "%TEMP%" && "%TEMP%\xgoup.exe" self install -modify-path=true
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$zip=\"$env:TEMP\xgoup-win.zip\"; curl.exe -fsSL \"https://github.com/fanfeilong/xgoup/releases/latest/download/xgoup-windows-amd64.zip\" -o $zip; $d=Join-Path $env:TEMP xgoup-extract; Remove-Item -Recurse -Force $d -ErrorAction SilentlyContinue; Expand-Archive -Path $zip -DestinationPath $d -Force; & (Join-Path $d xgoup.exe) self install -modify-path=true"
 ```
 
 Install a source toolchain (latest from `main`):
