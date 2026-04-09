@@ -12,8 +12,8 @@
 
 ```text
 xgoup/
-  bin/
-    xgoup                 # local dev entrypoint
+  cmd/
+    xgoup/                # xgoup entry (XGo)
   scripts/
     install.sh            # unix bootstrap
     install.ps1           # windows bootstrap
@@ -39,7 +39,6 @@ checksums.txt
 Each archive contains:
 
 - `xgoup` (or `xgoup.exe`)
-- `LICENSE`
 - optional `README-short.txt`
 
 ## 4. Bootstrap Contract

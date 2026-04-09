@@ -60,12 +60,12 @@ jobs:
           dist="dist"
           mkdir -p "$dist"
 
-          # Unix artifacts (script payload)
+          # Unix artifacts (native xgoup payload)
           for os in darwin linux; do
             for arch in amd64 arm64; do
               name="xgoup-${version}-${os}-${arch}"
               stage="$(mktemp -d)"
-              cp bin/xgoup "$stage/xgoup"
+              (cd cmd/xgoup && GOOS="$os" GOARCH="$arch" xgo build -trimpath -ldflags="-s -w" -o "$stage/xgoup" .)
               chmod +x "$stage/xgoup"
               tar -C "$stage" -czf "$dist/${name}.tar.gz" xgoup
               rm -rf "$stage"

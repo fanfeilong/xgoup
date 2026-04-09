@@ -97,11 +97,11 @@ Default home: `~/.xgoup` (override with `XGOUP_HOME`)
 
 ## Development (run from repo checkout)
 
-If you didn't install `xgoup` yet, you can run it from this repo:
+Build the local `xgoup` binary from this repo:
 
 ```bash
-chmod +x ./bin/xgoup
-./bin/xgoup init
+xgo build -o ./dist/xgoup ./cmd/xgoup
+./dist/xgoup init
 ```
 
 ## Design docs
@@ -125,4 +125,4 @@ chmod +x ./bin/xgoup
   - `xgoup-<version>-windows-amd64.zip`
   - `xgoup-<version>-windows-arm64.zip`
   - `checksums.txt`
-- Windows zip contains the native `xgoup.exe` binary (use `xgoup self install` after download).
+- Release artifacts contain native `xgoup` / `xgoup.exe` binaries.
