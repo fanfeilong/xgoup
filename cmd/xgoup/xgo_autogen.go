@@ -15,15 +15,14 @@ import (
 	"github.com/fanfeilong/xgoup/internal/userenv"
 	"os"
 	"os/exec"
-	"runtime"
 )
 
 const _ = true
-//line cmd/xgoup/main.xgo:19
+//line cmd/xgoup/main.xgo:18
 func main() {
-//line cmd/xgoup/main.xgo:19:1
+//line cmd/xgoup/main.xgo:18:1
 	printUsage := func() {
-//line cmd/xgoup/main.xgo:20:1
+//line cmd/xgoup/main.xgo:19:1
 		fmt.Println(`xgoup - XGo toolchain manager
 
 Usage:
@@ -32,7 +31,7 @@ Usage:
   xgoup toolchain update [name]
   xgoup toolchain list [--json]
   xgoup toolchain remove <name> [--purge]
-  xgoup default <name> [--persist-user-xgoroot]
+  xgoup default <name>
   xgoup run [--toolchain <name>] <xgo-args...>
   xgoup which [--toolchain <name>]
   xgoup env [--toolchain <name>] [--shell <sh|zsh|fish|powershell>]
@@ -49,580 +48,566 @@ Global options:
   -h, --help
   -V, --version`)
 	}
-//line cmd/xgoup/main.xgo:46:1
+//line cmd/xgoup/main.xgo:45:1
 	printVersion := func() {
-//line cmd/xgoup/main.xgo:47:1
+//line cmd/xgoup/main.xgo:46:1
 		v := buildinfo.Version
-//line cmd/xgoup/main.xgo:48:1
+//line cmd/xgoup/main.xgo:47:1
 		if v == "" {
-//line cmd/xgoup/main.xgo:49:1
+//line cmd/xgoup/main.xgo:48:1
 			v = "dev"
 		}
-//line cmd/xgoup/main.xgo:51:1
+//line cmd/xgoup/main.xgo:50:1
 		fmt.Println("xgoup", v)
 	}
-//line cmd/xgoup/main.xgo:54:1
+//line cmd/xgoup/main.xgo:53:1
 	dieUsage := func(msg string) {
-//line cmd/xgoup/main.xgo:55:1
+//line cmd/xgoup/main.xgo:54:1
 		fmt.Fprintln(os.Stderr, "[xgoup] ERROR:", msg)
-//line cmd/xgoup/main.xgo:56:1
+//line cmd/xgoup/main.xgo:55:1
 		fmt.Fprintln(os.Stderr)
-//line cmd/xgoup/main.xgo:57:1
+//line cmd/xgoup/main.xgo:56:1
 		printUsage()
-//line cmd/xgoup/main.xgo:58:1
+//line cmd/xgoup/main.xgo:57:1
 		os.Exit(2)
 	}
-//line cmd/xgoup/main.xgo:61:1
+//line cmd/xgoup/main.xgo:60:1
 	args := os.Args[1:]
-//line cmd/xgoup/main.xgo:62:1
+//line cmd/xgoup/main.xgo:61:1
 	if len(args) == 0 {
+//line cmd/xgoup/main.xgo:62:1
+		printUsage()
 //line cmd/xgoup/main.xgo:63:1
-		printUsage()
-//line cmd/xgoup/main.xgo:64:1
 		os.Exit(0)
 	}
-//line cmd/xgoup/main.xgo:67:1
+//line cmd/xgoup/main.xgo:66:1
 	switch args[0] {
-//line cmd/xgoup/main.xgo:68:1
+//line cmd/xgoup/main.xgo:67:1
 	case "-h", "--help", "help":
-//line cmd/xgoup/main.xgo:69:1
+//line cmd/xgoup/main.xgo:68:1
 		printUsage()
-//line cmd/xgoup/main.xgo:70:1
+//line cmd/xgoup/main.xgo:69:1
 		os.Exit(0)
-//line cmd/xgoup/main.xgo:71:1
+//line cmd/xgoup/main.xgo:70:1
 	case "-V", "--version", "version":
-//line cmd/xgoup/main.xgo:72:1
+//line cmd/xgoup/main.xgo:71:1
 		printVersion()
-//line cmd/xgoup/main.xgo:73:1
+//line cmd/xgoup/main.xgo:72:1
 		os.Exit(0)
 	}
-//line cmd/xgoup/main.xgo:77:1
+//line cmd/xgoup/main.xgo:76:1
 	if args[0] == "install" {
-//line cmd/xgoup/main.xgo:79:1
+//line cmd/xgoup/main.xgo:78:1
 		args = append([]string{"toolchain", "install"}, args[1:]...) 
-//line cmd/xgoup/main.xgo:80:1
+//line cmd/xgoup/main.xgo:79:1
 		args = append(args, "--method", "source")
 	} else
-//line cmd/xgoup/main.xgo:81:1
+//line cmd/xgoup/main.xgo:80:1
 	if args[0] == "update" {
-//line cmd/xgoup/main.xgo:82:1
+//line cmd/xgoup/main.xgo:81:1
 		args = append([]string{"toolchain", "update"}, args[1:]...)
 	} else
-//line cmd/xgoup/main.xgo:83:1
+//line cmd/xgoup/main.xgo:82:1
 	if args[0] == "list" {
-//line cmd/xgoup/main.xgo:84:1
+//line cmd/xgoup/main.xgo:83:1
 		args = append([]string{"toolchain", "list"}, args[1:]...)
 	}
-//line cmd/xgoup/main.xgo:87:1
+//line cmd/xgoup/main.xgo:86:1
 	cmd := args[0]
-//line cmd/xgoup/main.xgo:88:1
+//line cmd/xgoup/main.xgo:87:1
 	rest := args[1:]
-//line cmd/xgoup/main.xgo:90:1
+//line cmd/xgoup/main.xgo:89:1
 	die := func(err error) {
-//line cmd/xgoup/main.xgo:91:1
+//line cmd/xgoup/main.xgo:90:1
 		fmt.Fprintln(os.Stderr, "[xgoup] ERROR:", err.Error())
-//line cmd/xgoup/main.xgo:92:1
+//line cmd/xgoup/main.xgo:91:1
 		os.Exit(1)
 	}
-//line cmd/xgoup/main.xgo:95:1
+//line cmd/xgoup/main.xgo:94:1
 	orDefault := func(v string, def string) string {
-//line cmd/xgoup/main.xgo:96:1
+//line cmd/xgoup/main.xgo:95:1
 		if v != "" {
-//line cmd/xgoup/main.xgo:97:1
+//line cmd/xgoup/main.xgo:96:1
 			return v
 		}
-//line cmd/xgoup/main.xgo:99:1
+//line cmd/xgoup/main.xgo:98:1
 		return def
 	}
-//line cmd/xgoup/main.xgo:102:1
+//line cmd/xgoup/main.xgo:101:1
 	execCommand := func(name string, args ...string) *exec.Cmd {
-//line cmd/xgoup/main.xgo:103:1
+//line cmd/xgoup/main.xgo:102:1
 		return exec.Command(name, args...)
 	}
-//line cmd/xgoup/main.xgo:107:1
+//line cmd/xgoup/main.xgo:106:1
 	globalHome := ""
-//line cmd/xgoup/main.xgo:108:1
+//line cmd/xgoup/main.xgo:107:1
 	for
-//line cmd/xgoup/main.xgo:108:1
+//line cmd/xgoup/main.xgo:107:1
 	i := 0; i < len(rest);
-//line cmd/xgoup/main.xgo:108:1
+//line cmd/xgoup/main.xgo:107:1
 	i++ {
-//line cmd/xgoup/main.xgo:109:1
+//line cmd/xgoup/main.xgo:108:1
 		if rest[i] == "--home" && i+1 < len(rest) {
-//line cmd/xgoup/main.xgo:110:1
+//line cmd/xgoup/main.xgo:109:1
 			globalHome = rest[i+1]
-//line cmd/xgoup/main.xgo:111:1
+//line cmd/xgoup/main.xgo:110:1
 			rest = append(rest[:i], rest[i+2:]...) 
-//line cmd/xgoup/main.xgo:112:1
+//line cmd/xgoup/main.xgo:111:1
 			break
 		}
 	}
-//line cmd/xgoup/main.xgo:115:1
+//line cmd/xgoup/main.xgo:114:1
 	if globalHome != "" {
-//line cmd/xgoup/main.xgo:116:1
+//line cmd/xgoup/main.xgo:115:1
 		_ = os.Setenv("XGOUP_HOME", globalHome)
 	}
-//line cmd/xgoup/main.xgo:119:1
+//line cmd/xgoup/main.xgo:118:1
 	switch cmd {
-//line cmd/xgoup/main.xgo:120:1
+//line cmd/xgoup/main.xgo:119:1
 	case "init":
-//line cmd/xgoup/main.xgo:121:1
+//line cmd/xgoup/main.xgo:120:1
 		p, c, err := toolchain.Init()
-//line cmd/xgoup/main.xgo:122:1
+//line cmd/xgoup/main.xgo:121:1
 		if err != nil {
-//line cmd/xgoup/main.xgo:123:1
+//line cmd/xgoup/main.xgo:122:1
 			die(err)
 		}
-//line cmd/xgoup/main.xgo:125:1
+//line cmd/xgoup/main.xgo:124:1
 		_ = p
-//line cmd/xgoup/main.xgo:126:1
+//line cmd/xgoup/main.xgo:125:1
 		_ = c
-//line cmd/xgoup/main.xgo:127:1
+//line cmd/xgoup/main.xgo:126:1
 		fmt.Println("[xgoup] initialized home")
-//line cmd/xgoup/main.xgo:128:1
+//line cmd/xgoup/main.xgo:127:1
 		os.Exit(0)
-//line cmd/xgoup/main.xgo:129:1
+//line cmd/xgoup/main.xgo:128:1
 	case "toolchain":
-//line cmd/xgoup/main.xgo:130:1
+//line cmd/xgoup/main.xgo:129:1
 		if len(rest) == 0 {
-//line cmd/xgoup/main.xgo:131:1
+//line cmd/xgoup/main.xgo:130:1
 			dieUsage("missing toolchain subcommand")
 		}
-//line cmd/xgoup/main.xgo:133:1
+//line cmd/xgoup/main.xgo:132:1
 		switch rest[0] {
-//line cmd/xgoup/main.xgo:134:1
+//line cmd/xgoup/main.xgo:133:1
 		case "install":
-//line cmd/xgoup/main.xgo:135:1
+//line cmd/xgoup/main.xgo:134:1
 			fs := flag.NewFlagSet("toolchain install", flag.ContinueOnError)
-//line cmd/xgoup/main.xgo:136:1
+//line cmd/xgoup/main.xgo:135:1
 			method := fs.String("method", "standard", "")
-//line cmd/xgoup/main.xgo:137:1
+//line cmd/xgoup/main.xgo:136:1
 			repo := fs.String("repo", "", "")
-//line cmd/xgoup/main.xgo:138:1
+//line cmd/xgoup/main.xgo:137:1
 			ref := fs.String("ref", "", "")
-//line cmd/xgoup/main.xgo:139:1
+//line cmd/xgoup/main.xgo:138:1
 			path := fs.String("path", "", "")
-//line cmd/xgoup/main.xgo:140:1
+//line cmd/xgoup/main.xgo:139:1
 			force := fs.Bool("force", false, "")
-//line cmd/xgoup/main.xgo:141:1
+//line cmd/xgoup/main.xgo:140:1
 			_ = fs.Parse(rest[1:])
-//line cmd/xgoup/main.xgo:142:1
+//line cmd/xgoup/main.xgo:141:1
 			pos := fs.Args()
-//line cmd/xgoup/main.xgo:143:1
+//line cmd/xgoup/main.xgo:142:1
 			if len(pos) < 1 {
-//line cmd/xgoup/main.xgo:144:1
+//line cmd/xgoup/main.xgo:143:1
 				dieUsage("toolchain install requires <name>")
 			}
-//line cmd/xgoup/main.xgo:146:1
+//line cmd/xgoup/main.xgo:145:1
 			name := pos[0]
-//line cmd/xgoup/main.xgo:147:1
+//line cmd/xgoup/main.xgo:146:1
 			p, c, err := toolchain.Init()
+//line cmd/xgoup/main.xgo:147:1
+			if err != nil {
 //line cmd/xgoup/main.xgo:148:1
-			if err != nil {
-//line cmd/xgoup/main.xgo:149:1
 				die(err)
 			}
-//line cmd/xgoup/main.xgo:151:1
+//line cmd/xgoup/main.xgo:150:1
 			_, err = toolchain.Install(p, c, name, toolchain.InstallOptions{Method: *method, Repo: *repo, Ref: *ref, Path: *path, Force: *force})
-//line cmd/xgoup/main.xgo:158:1
+//line cmd/xgoup/main.xgo:157:1
 			if err != nil {
-//line cmd/xgoup/main.xgo:159:1
+//line cmd/xgoup/main.xgo:158:1
 				die(err)
 			}
-//line cmd/xgoup/main.xgo:161:1
+//line cmd/xgoup/main.xgo:160:1
 			fmt.Println("[xgoup] installed toolchain", name)
-//line cmd/xgoup/main.xgo:162:1
+//line cmd/xgoup/main.xgo:161:1
 			os.Exit(0)
-//line cmd/xgoup/main.xgo:163:1
+//line cmd/xgoup/main.xgo:162:1
 		case "update":
-//line cmd/xgoup/main.xgo:164:1
+//line cmd/xgoup/main.xgo:163:1
 			fs := flag.NewFlagSet("toolchain update", flag.ContinueOnError)
-//line cmd/xgoup/main.xgo:165:1
+//line cmd/xgoup/main.xgo:164:1
 			_ = fs.Parse(rest[1:])
-//line cmd/xgoup/main.xgo:166:1
+//line cmd/xgoup/main.xgo:165:1
 			pos := fs.Args()
-//line cmd/xgoup/main.xgo:167:1
+//line cmd/xgoup/main.xgo:166:1
 			name := ""
-//line cmd/xgoup/main.xgo:168:1
+//line cmd/xgoup/main.xgo:167:1
 			if len(pos) > 0 {
-//line cmd/xgoup/main.xgo:169:1
+//line cmd/xgoup/main.xgo:168:1
 				name = pos[0]
 			}
+//line cmd/xgoup/main.xgo:170:1
+			p, c, err := toolchain.Init()
 //line cmd/xgoup/main.xgo:171:1
-			p, c, err := toolchain.Init()
+			if err != nil {
 //line cmd/xgoup/main.xgo:172:1
-			if err != nil {
-//line cmd/xgoup/main.xgo:173:1
 				die(err)
 			}
-//line cmd/xgoup/main.xgo:175:1
+//line cmd/xgoup/main.xgo:174:1
 			_, err = toolchain.Update(p, c, name)
+//line cmd/xgoup/main.xgo:175:1
+			if err != nil {
 //line cmd/xgoup/main.xgo:176:1
-			if err != nil {
-//line cmd/xgoup/main.xgo:177:1
 				die(err)
 			}
-//line cmd/xgoup/main.xgo:179:1
+//line cmd/xgoup/main.xgo:178:1
 			fmt.Println("[xgoup] updated toolchain", orDefault(name, c.DefaultToolchain))
-//line cmd/xgoup/main.xgo:180:1
+//line cmd/xgoup/main.xgo:179:1
 			os.Exit(0)
-//line cmd/xgoup/main.xgo:181:1
+//line cmd/xgoup/main.xgo:180:1
 		case "list":
-//line cmd/xgoup/main.xgo:182:1
+//line cmd/xgoup/main.xgo:181:1
 			fs := flag.NewFlagSet("toolchain list", flag.ContinueOnError)
-//line cmd/xgoup/main.xgo:183:1
+//line cmd/xgoup/main.xgo:182:1
 			jsonOut := fs.Bool("json", false, "")
-//line cmd/xgoup/main.xgo:184:1
+//line cmd/xgoup/main.xgo:183:1
 			_ = fs.Parse(rest[1:])
-//line cmd/xgoup/main.xgo:185:1
+//line cmd/xgoup/main.xgo:184:1
 			p, c, err := toolchain.Init()
+//line cmd/xgoup/main.xgo:185:1
+			if err != nil {
 //line cmd/xgoup/main.xgo:186:1
-			if err != nil {
-//line cmd/xgoup/main.xgo:187:1
 				die(err)
 			}
-//line cmd/xgoup/main.xgo:189:1
+//line cmd/xgoup/main.xgo:188:1
 			items, err := toolchain.List(p, c)
-//line cmd/xgoup/main.xgo:190:1
+//line cmd/xgoup/main.xgo:189:1
 			if err != nil {
-//line cmd/xgoup/main.xgo:191:1
+//line cmd/xgoup/main.xgo:190:1
 				die(err)
 			}
-//line cmd/xgoup/main.xgo:193:1
+//line cmd/xgoup/main.xgo:192:1
 			if *jsonOut {
-//line cmd/xgoup/main.xgo:194:1
+//line cmd/xgoup/main.xgo:193:1
 				b, _ := json.Marshal(items)
-//line cmd/xgoup/main.xgo:195:1
+//line cmd/xgoup/main.xgo:194:1
 				fmt.Println(string(b))
 			} else {
 				for
-//line cmd/xgoup/main.xgo:197:1
+//line cmd/xgoup/main.xgo:196:1
 				_, m := range items {
-//line cmd/xgoup/main.xgo:198:1
+//line cmd/xgoup/main.xgo:197:1
 					fmt.Printf("%s\t%s\t%s\n", m.Name, m.Kind, m.RootPath)
 				}
 			}
-//line cmd/xgoup/main.xgo:201:1
+//line cmd/xgoup/main.xgo:200:1
 			os.Exit(0)
-//line cmd/xgoup/main.xgo:202:1
+//line cmd/xgoup/main.xgo:201:1
 		case "remove":
-//line cmd/xgoup/main.xgo:203:1
+//line cmd/xgoup/main.xgo:202:1
 			fs := flag.NewFlagSet("toolchain remove", flag.ContinueOnError)
-//line cmd/xgoup/main.xgo:204:1
+//line cmd/xgoup/main.xgo:203:1
 			purge := fs.Bool("purge", false, "")
-//line cmd/xgoup/main.xgo:205:1
+//line cmd/xgoup/main.xgo:204:1
 			_ = fs.Parse(rest[1:])
-//line cmd/xgoup/main.xgo:206:1
+//line cmd/xgoup/main.xgo:205:1
 			pos := fs.Args()
-//line cmd/xgoup/main.xgo:207:1
+//line cmd/xgoup/main.xgo:206:1
 			if len(pos) < 1 {
-//line cmd/xgoup/main.xgo:208:1
+//line cmd/xgoup/main.xgo:207:1
 				dieUsage("toolchain remove requires <name>")
 			}
-//line cmd/xgoup/main.xgo:210:1
+//line cmd/xgoup/main.xgo:209:1
 			name := pos[0]
-//line cmd/xgoup/main.xgo:211:1
+//line cmd/xgoup/main.xgo:210:1
 			p, c, err := toolchain.Init()
+//line cmd/xgoup/main.xgo:211:1
+			if err != nil {
 //line cmd/xgoup/main.xgo:212:1
-			if err != nil {
-//line cmd/xgoup/main.xgo:213:1
 				die(err)
 			}
-//line cmd/xgoup/main.xgo:215:1
+//line cmd/xgoup/main.xgo:214:1
 			_, err = toolchain.Remove(p, c, name, *purge)
-//line cmd/xgoup/main.xgo:216:1
+//line cmd/xgoup/main.xgo:215:1
 			if err != nil {
-//line cmd/xgoup/main.xgo:217:1
+//line cmd/xgoup/main.xgo:216:1
 				die(err)
 			}
-//line cmd/xgoup/main.xgo:219:1
+//line cmd/xgoup/main.xgo:218:1
 			fmt.Println("[xgoup] removed toolchain", name)
-//line cmd/xgoup/main.xgo:220:1
+//line cmd/xgoup/main.xgo:219:1
 			os.Exit(0)
-//line cmd/xgoup/main.xgo:221:1
+//line cmd/xgoup/main.xgo:220:1
 		default:
-//line cmd/xgoup/main.xgo:222:1
+//line cmd/xgoup/main.xgo:221:1
 			dieUsage("unknown toolchain subcommand: " + rest[0])
 		}
-//line cmd/xgoup/main.xgo:224:1
+//line cmd/xgoup/main.xgo:223:1
 	case "default":
-//line cmd/xgoup/main.xgo:225:1
+//line cmd/xgoup/main.xgo:224:1
 		fs := flag.NewFlagSet("default", flag.ContinueOnError)
-//line cmd/xgoup/main.xgo:226:1
-		persist := fs.Bool("persist-user-xgoroot", false, "set Windows user env XGOROOT to this toolchain root (new terminals only)")
-//line cmd/xgoup/main.xgo:227:1
+//line cmd/xgoup/main.xgo:225:1
 		_ = fs.Parse(rest)
-//line cmd/xgoup/main.xgo:228:1
+//line cmd/xgoup/main.xgo:226:1
 		pos := fs.Args()
-//line cmd/xgoup/main.xgo:229:1
+//line cmd/xgoup/main.xgo:227:1
 		if len(pos) < 1 {
-//line cmd/xgoup/main.xgo:230:1
+//line cmd/xgoup/main.xgo:228:1
 			dieUsage("default requires <name>")
 		}
-//line cmd/xgoup/main.xgo:232:1
+//line cmd/xgoup/main.xgo:230:1
 		name := pos[0]
-//line cmd/xgoup/main.xgo:233:1
+//line cmd/xgoup/main.xgo:231:1
 		p, c, err := toolchain.Init()
-//line cmd/xgoup/main.xgo:234:1
+//line cmd/xgoup/main.xgo:232:1
 		if err != nil {
+//line cmd/xgoup/main.xgo:233:1
+			die(err)
+		}
 //line cmd/xgoup/main.xgo:235:1
-			die(err)
-		}
-//line cmd/xgoup/main.xgo:237:1
 		_, err = toolchain.SetDefault(p, c, name)
-//line cmd/xgoup/main.xgo:238:1
+//line cmd/xgoup/main.xgo:236:1
 		if err != nil {
+//line cmd/xgoup/main.xgo:237:1
+			die(err)
+		}
 //line cmd/xgoup/main.xgo:239:1
-			die(err)
-		}
-//line cmd/xgoup/main.xgo:241:1
 		m, err := meta.Load(p.Metadata, name)
-//line cmd/xgoup/main.xgo:242:1
+//line cmd/xgoup/main.xgo:240:1
 		if err != nil {
-//line cmd/xgoup/main.xgo:243:1
+//line cmd/xgoup/main.xgo:241:1
 			die(err)
 		}
-//line cmd/xgoup/main.xgo:245:1
+//line cmd/xgoup/main.xgo:243:1
 		root := m.XgoRootValue
-//line cmd/xgoup/main.xgo:246:1
+//line cmd/xgoup/main.xgo:244:1
 		if root == "" {
-//line cmd/xgoup/main.xgo:247:1
+//line cmd/xgoup/main.xgo:245:1
 			root = m.RootPath
 		}
-//line cmd/xgoup/main.xgo:249:1
+//line cmd/xgoup/main.xgo:247:1
 		fmt.Println("[xgoup] default toolchain set to", name)
-//line cmd/xgoup/main.xgo:250:1
+//line cmd/xgoup/main.xgo:248:1
 		fmt.Println("[xgoup] XGOROOT for this toolchain:", root)
-//line cmd/xgoup/main.xgo:251:1
-		if *persist {
-//line cmd/xgoup/main.xgo:252:1
-			if runtime.GOOS != "windows" {
-//line cmd/xgoup/main.xgo:253:1
-				fmt.Fprintln(os.Stderr, "[xgoup] WARN: --persist-user-xgoroot is only supported on Windows; ignored")
-			} else {
-//line cmd/xgoup/main.xgo:255:1
-				if
-//line cmd/xgoup/main.xgo:255:1
-				err := userenv.SetUserXGOROOT(root); err != nil {
-//line cmd/xgoup/main.xgo:256:1
-					die(err)
-				}
-//line cmd/xgoup/main.xgo:258:1
-				fmt.Println("[xgoup] persisted user env XGOROOT (open a new terminal to see it)")
-			}
-		} else {
-//line cmd/xgoup/main.xgo:261:1
-			fmt.Println("[xgoup] hint: open a new shell after --persist-user-xgoroot, or run: xgoup env --shell powershell")
+//line cmd/xgoup/main.xgo:249:1
+		if
+//line cmd/xgoup/main.xgo:249:1
+		err := userenv.PersistDefaultToolchainEnv(root); err != nil {
+//line cmd/xgoup/main.xgo:250:1
+			die(err)
 		}
-//line cmd/xgoup/main.xgo:263:1
+//line cmd/xgoup/main.xgo:252:1
+		fmt.Println("[xgoup] persisted user env (open a new terminal; on Unix you can source ~/.xgoup/env.sh in this shell)")
+//line cmd/xgoup/main.xgo:253:1
 		os.Exit(0)
-//line cmd/xgoup/main.xgo:264:1
+//line cmd/xgoup/main.xgo:254:1
 	case "run":
-//line cmd/xgoup/main.xgo:265:1
+//line cmd/xgoup/main.xgo:255:1
 		fs := flag.NewFlagSet("run", flag.ContinueOnError)
-//line cmd/xgoup/main.xgo:266:1
+//line cmd/xgoup/main.xgo:256:1
 		tcn := fs.String("toolchain", "", "")
-//line cmd/xgoup/main.xgo:267:1
+//line cmd/xgoup/main.xgo:257:1
 		_ = fs.Parse(rest)
-//line cmd/xgoup/main.xgo:268:1
+//line cmd/xgoup/main.xgo:258:1
 		xgoArgs := fs.Args()
-//line cmd/xgoup/main.xgo:269:1
+//line cmd/xgoup/main.xgo:259:1
 		if len(xgoArgs) == 0 {
-//line cmd/xgoup/main.xgo:270:1
+//line cmd/xgoup/main.xgo:260:1
 			dieUsage("run requires <xgo args...>")
 		}
+//line cmd/xgoup/main.xgo:262:1
+		p, c, err := toolchain.Init()
+//line cmd/xgoup/main.xgo:263:1
+		if err != nil {
+//line cmd/xgoup/main.xgo:264:1
+			die(err)
+		}
+//line cmd/xgoup/main.xgo:266:1
+		cwd, _ := os.Getwd()
+//line cmd/xgoup/main.xgo:267:1
+		r, err := resolve.ResolveToolchain(p, c, *tcn, cwd)
+//line cmd/xgoup/main.xgo:268:1
+		if err != nil {
+//line cmd/xgoup/main.xgo:269:1
+			die(err)
+		}
 //line cmd/xgoup/main.xgo:272:1
-		p, c, err := toolchain.Init()
-//line cmd/xgoup/main.xgo:273:1
-		if err != nil {
-//line cmd/xgoup/main.xgo:274:1
-			die(err)
-		}
-//line cmd/xgoup/main.xgo:276:1
-		cwd, _ := os.Getwd()
-//line cmd/xgoup/main.xgo:277:1
-		r, err := resolve.ResolveToolchain(p, c, *tcn, cwd)
-//line cmd/xgoup/main.xgo:278:1
-		if err != nil {
-//line cmd/xgoup/main.xgo:279:1
-			die(err)
-		}
-//line cmd/xgoup/main.xgo:282:1
 		cmd := execCommand(r.XgoExe, xgoArgs...) 
-//line cmd/xgoup/main.xgo:283:1
+//line cmd/xgoup/main.xgo:273:1
 		cmd.Env = append(os.Environ(), "XGOROOT="+r.XgoRoot, "PATH="+r.BinDir+string(os.PathListSeparator)+os.Getenv("PATH"))
-//line cmd/xgoup/main.xgo:287:1
+//line cmd/xgoup/main.xgo:277:1
 		cmd.Stdout = os.Stdout
-//line cmd/xgoup/main.xgo:288:1
+//line cmd/xgoup/main.xgo:278:1
 		cmd.Stderr = os.Stderr
-//line cmd/xgoup/main.xgo:289:1
+//line cmd/xgoup/main.xgo:279:1
 		cmd.Stdin = os.Stdin
-//line cmd/xgoup/main.xgo:290:1
+//line cmd/xgoup/main.xgo:280:1
 		if
-//line cmd/xgoup/main.xgo:290:1
+//line cmd/xgoup/main.xgo:280:1
 		err := cmd.Run(); err != nil {
-//line cmd/xgoup/main.xgo:291:1
+//line cmd/xgoup/main.xgo:281:1
 			die(err)
 		}
-//line cmd/xgoup/main.xgo:293:1
+//line cmd/xgoup/main.xgo:283:1
 		os.Exit(0)
-//line cmd/xgoup/main.xgo:294:1
+//line cmd/xgoup/main.xgo:284:1
 	case "which":
-//line cmd/xgoup/main.xgo:295:1
+//line cmd/xgoup/main.xgo:285:1
 		fs := flag.NewFlagSet("which", flag.ContinueOnError)
-//line cmd/xgoup/main.xgo:296:1
+//line cmd/xgoup/main.xgo:286:1
 		tcn := fs.String("toolchain", "", "")
+//line cmd/xgoup/main.xgo:287:1
+		_ = fs.Parse(rest)
+//line cmd/xgoup/main.xgo:288:1
+		p, c, err := toolchain.Init()
+//line cmd/xgoup/main.xgo:289:1
+		if err != nil {
+//line cmd/xgoup/main.xgo:290:1
+			die(err)
+		}
+//line cmd/xgoup/main.xgo:292:1
+		cwd, _ := os.Getwd()
+//line cmd/xgoup/main.xgo:293:1
+		r, err := resolve.ResolveToolchain(p, c, *tcn, cwd)
+//line cmd/xgoup/main.xgo:294:1
+		if err != nil {
+//line cmd/xgoup/main.xgo:295:1
+			die(err)
+		}
 //line cmd/xgoup/main.xgo:297:1
-		_ = fs.Parse(rest)
-//line cmd/xgoup/main.xgo:298:1
-		p, c, err := toolchain.Init()
-//line cmd/xgoup/main.xgo:299:1
-		if err != nil {
-//line cmd/xgoup/main.xgo:300:1
-			die(err)
-		}
-//line cmd/xgoup/main.xgo:302:1
-		cwd, _ := os.Getwd()
-//line cmd/xgoup/main.xgo:303:1
-		r, err := resolve.ResolveToolchain(p, c, *tcn, cwd)
-//line cmd/xgoup/main.xgo:304:1
-		if err != nil {
-//line cmd/xgoup/main.xgo:305:1
-			die(err)
-		}
-//line cmd/xgoup/main.xgo:307:1
 		fmt.Println(r.XgoExe)
-//line cmd/xgoup/main.xgo:308:1
+//line cmd/xgoup/main.xgo:298:1
 		os.Exit(0)
-//line cmd/xgoup/main.xgo:309:1
+//line cmd/xgoup/main.xgo:299:1
 	case "env":
-//line cmd/xgoup/main.xgo:310:1
+//line cmd/xgoup/main.xgo:300:1
 		fs := flag.NewFlagSet("env", flag.ContinueOnError)
-//line cmd/xgoup/main.xgo:311:1
+//line cmd/xgoup/main.xgo:301:1
 		tcn := fs.String("toolchain", "", "")
-//line cmd/xgoup/main.xgo:312:1
+//line cmd/xgoup/main.xgo:302:1
 		shell := fs.String("shell", "powershell", "")
-//line cmd/xgoup/main.xgo:313:1
+//line cmd/xgoup/main.xgo:303:1
 		_ = fs.Parse(rest)
-//line cmd/xgoup/main.xgo:314:1
+//line cmd/xgoup/main.xgo:304:1
 		p, c, err := toolchain.Init()
-//line cmd/xgoup/main.xgo:315:1
+//line cmd/xgoup/main.xgo:305:1
 		if err != nil {
-//line cmd/xgoup/main.xgo:316:1
+//line cmd/xgoup/main.xgo:306:1
 			die(err)
 		}
-//line cmd/xgoup/main.xgo:318:1
+//line cmd/xgoup/main.xgo:308:1
 		cwd, _ := os.Getwd()
-//line cmd/xgoup/main.xgo:319:1
+//line cmd/xgoup/main.xgo:309:1
 		r, err := resolve.ResolveToolchain(p, c, *tcn, cwd)
-//line cmd/xgoup/main.xgo:320:1
+//line cmd/xgoup/main.xgo:310:1
 		if err != nil {
-//line cmd/xgoup/main.xgo:321:1
+//line cmd/xgoup/main.xgo:311:1
 			die(err)
 		}
-//line cmd/xgoup/main.xgo:323:1
+//line cmd/xgoup/main.xgo:313:1
 		switch *shell {
-//line cmd/xgoup/main.xgo:324:1
+//line cmd/xgoup/main.xgo:314:1
 		case "powershell":
-//line cmd/xgoup/main.xgo:325:1
+//line cmd/xgoup/main.xgo:315:1
 			fmt.Printf("$env:XGOROOT = \"%s\"\n", r.XgoRoot)
-//line cmd/xgoup/main.xgo:326:1
+//line cmd/xgoup/main.xgo:316:1
 			fmt.Printf("$env:PATH = \"%s%c\" + $env:PATH\n", r.BinDir, os.PathListSeparator)
-//line cmd/xgoup/main.xgo:327:1
+//line cmd/xgoup/main.xgo:317:1
 		case "sh", "zsh":
-//line cmd/xgoup/main.xgo:328:1
+//line cmd/xgoup/main.xgo:318:1
 			fmt.Printf("export XGOROOT=\"%s\"\n", r.XgoRoot)
-//line cmd/xgoup/main.xgo:329:1
+//line cmd/xgoup/main.xgo:319:1
 			fmt.Printf("export PATH=\"%s:%s\"\n", r.BinDir, "$PATH")
-//line cmd/xgoup/main.xgo:330:1
+//line cmd/xgoup/main.xgo:320:1
 		default:
-//line cmd/xgoup/main.xgo:331:1
+//line cmd/xgoup/main.xgo:321:1
 			dieUsage("unsupported shell: " + *shell)
 		}
+//line cmd/xgoup/main.xgo:323:1
+		os.Exit(0)
+//line cmd/xgoup/main.xgo:324:1
+	case "doctor":
+//line cmd/xgoup/main.xgo:325:1
+		p, c, err := toolchain.Init()
+//line cmd/xgoup/main.xgo:326:1
+		if err != nil {
+//line cmd/xgoup/main.xgo:327:1
+			die(err)
+		}
+//line cmd/xgoup/main.xgo:329:1
+		if
+//line cmd/xgoup/main.xgo:329:1
+		err := toolchain.Doctor(p, c); err != nil {
+//line cmd/xgoup/main.xgo:330:1
+			die(err)
+		}
+//line cmd/xgoup/main.xgo:332:1
+		fmt.Println("[xgoup] doctor: ok")
 //line cmd/xgoup/main.xgo:333:1
 		os.Exit(0)
 //line cmd/xgoup/main.xgo:334:1
-	case "doctor":
-//line cmd/xgoup/main.xgo:335:1
-		p, c, err := toolchain.Init()
-//line cmd/xgoup/main.xgo:336:1
-		if err != nil {
-//line cmd/xgoup/main.xgo:337:1
-			die(err)
-		}
-//line cmd/xgoup/main.xgo:339:1
-		if
-//line cmd/xgoup/main.xgo:339:1
-		err := toolchain.Doctor(p, c); err != nil {
-//line cmd/xgoup/main.xgo:340:1
-			die(err)
-		}
-//line cmd/xgoup/main.xgo:342:1
-		fmt.Println("[xgoup] doctor: ok")
-//line cmd/xgoup/main.xgo:343:1
-		os.Exit(0)
-//line cmd/xgoup/main.xgo:344:1
 	case "self":
-//line cmd/xgoup/main.xgo:345:1
+//line cmd/xgoup/main.xgo:335:1
 		if len(rest) == 0 {
-//line cmd/xgoup/main.xgo:346:1
+//line cmd/xgoup/main.xgo:336:1
 			dieUsage("missing self subcommand")
 		}
-//line cmd/xgoup/main.xgo:348:1
+//line cmd/xgoup/main.xgo:338:1
 		switch rest[0] {
-//line cmd/xgoup/main.xgo:349:1
+//line cmd/xgoup/main.xgo:339:1
 		case "update":
-//line cmd/xgoup/main.xgo:350:1
+//line cmd/xgoup/main.xgo:340:1
 			fs := flag.NewFlagSet("self update", flag.ContinueOnError)
-//line cmd/xgoup/main.xgo:351:1
+//line cmd/xgoup/main.xgo:341:1
 			repo := fs.String("repo", os.Getenv("XGOUP_GITHUB_REPO"), "")
+//line cmd/xgoup/main.xgo:342:1
+			_ = fs.Parse(rest[1:])
+//line cmd/xgoup/main.xgo:343:1
+			path, err := selfupdate.Update(selfupdate.Options{Repo: *repo})
+//line cmd/xgoup/main.xgo:344:1
+			if err != nil {
+//line cmd/xgoup/main.xgo:345:1
+				die(err)
+			}
+//line cmd/xgoup/main.xgo:347:1
+			fmt.Println("[xgoup] updated:", path)
+//line cmd/xgoup/main.xgo:348:1
+			os.Exit(0)
+//line cmd/xgoup/main.xgo:349:1
+		case "uninstall":
+//line cmd/xgoup/main.xgo:350:1
+			fs := flag.NewFlagSet("self uninstall", flag.ContinueOnError)
+//line cmd/xgoup/main.xgo:351:1
+			force := fs.Bool("force", false, "")
 //line cmd/xgoup/main.xgo:352:1
 			_ = fs.Parse(rest[1:])
 //line cmd/xgoup/main.xgo:353:1
-			path, err := selfupdate.Update(selfupdate.Options{Repo: *repo})
+			p, err := home.Resolve()
 //line cmd/xgoup/main.xgo:354:1
 			if err != nil {
 //line cmd/xgoup/main.xgo:355:1
 				die(err)
 			}
 //line cmd/xgoup/main.xgo:357:1
-			fmt.Println("[xgoup] updated:", path)
-//line cmd/xgoup/main.xgo:358:1
-			os.Exit(0)
-//line cmd/xgoup/main.xgo:359:1
-		case "uninstall":
-//line cmd/xgoup/main.xgo:360:1
-			fs := flag.NewFlagSet("self uninstall", flag.ContinueOnError)
-//line cmd/xgoup/main.xgo:361:1
-			force := fs.Bool("force", false, "")
-//line cmd/xgoup/main.xgo:362:1
-			_ = fs.Parse(rest[1:])
-//line cmd/xgoup/main.xgo:363:1
-			p, err := home.Resolve()
-//line cmd/xgoup/main.xgo:364:1
-			if err != nil {
-//line cmd/xgoup/main.xgo:365:1
-				die(err)
-			}
-//line cmd/xgoup/main.xgo:367:1
 			if
-//line cmd/xgoup/main.xgo:367:1
+//line cmd/xgoup/main.xgo:357:1
 			err := selfupdate.Uninstall(p.Home, *force); err != nil {
-//line cmd/xgoup/main.xgo:368:1
+//line cmd/xgoup/main.xgo:358:1
 				die(err)
 			}
-//line cmd/xgoup/main.xgo:370:1
+//line cmd/xgoup/main.xgo:360:1
 			fmt.Println("[xgoup] uninstalled home:", p.Home)
-//line cmd/xgoup/main.xgo:371:1
+//line cmd/xgoup/main.xgo:361:1
 			os.Exit(0)
-//line cmd/xgoup/main.xgo:372:1
+//line cmd/xgoup/main.xgo:362:1
 		default:
-//line cmd/xgoup/main.xgo:373:1
+//line cmd/xgoup/main.xgo:363:1
 			dieUsage("unknown self subcommand: " + rest[0])
 		}
-//line cmd/xgoup/main.xgo:375:1
+//line cmd/xgoup/main.xgo:365:1
 	default:
-//line cmd/xgoup/main.xgo:376:1
+//line cmd/xgoup/main.xgo:366:1
 		dieUsage("unknown command: " + cmd)
 	}
 }

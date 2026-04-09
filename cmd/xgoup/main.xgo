@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 
 	"github.com/fanfeilong/xgoup/internal/buildinfo"
@@ -25,7 +24,7 @@ Usage:
   xgoup toolchain update [name]
   xgoup toolchain list [--json]
   xgoup toolchain remove <name> [--purge]
-  xgoup default <name> [--persist-user-xgoroot]
+  xgoup default <name>
   xgoup run [--toolchain <name>] <xgo-args...>
   xgoup which [--toolchain <name>]
   xgoup env [--toolchain <name>] [--shell <sh|zsh|fish|powershell>]
@@ -223,7 +222,6 @@ case "toolchain":
 	}
 case "default":
 	fs := flag.NewFlagSet("default", flag.ContinueOnError)
-	persist := fs.Bool("persist-user-xgoroot", false, "set Windows user env XGOROOT to this toolchain root (new terminals only)")
 	_ = fs.Parse(rest)
 	pos := fs.Args()
 	if len(pos) < 1 {
@@ -248,18 +246,10 @@ case "default":
 	}
 	fmt.Println "[xgoup] default toolchain set to", name
 	fmt.Println "[xgoup] XGOROOT for this toolchain:", root
-	if *persist {
-		if runtime.GOOS != "windows" {
-			fmt.Fprintln os.Stderr, "[xgoup] WARN: --persist-user-xgoroot is only supported on Windows; ignored"
-		} else {
-			if err := userenv.SetUserXGOROOT(root); err != nil {
-				die(err)
-			}
-			fmt.Println "[xgoup] persisted user env XGOROOT (open a new terminal to see it)"
-		}
-	} else {
-		fmt.Println "[xgoup] hint: open a new shell after --persist-user-xgoroot, or run: xgoup env --shell powershell"
+	if err := userenv.PersistDefaultToolchainEnv(root); err != nil {
+		die(err)
 	}
+	fmt.Println "[xgoup] persisted user env (open a new terminal; on Unix you can source ~/.xgoup/env.sh in this shell)"
 	os.Exit 0
 case "run":
 	fs := flag.NewFlagSet("run", flag.ContinueOnError)
