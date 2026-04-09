@@ -115,6 +115,24 @@ Options:
 - `--no-browser`: print URLs only (for remote/headless environments)
 - `--repo <owner/name>`: override the GitHub repo (default: `goplus/xgo`). Also read from env `XGO_DOC_REPO`.
 
+### `xgoup ide install`
+
+Install the official Go/XGo VS Code extension (`goplus.gop`) into Cursor and/or VS Code.
+
+Behavior:
+
+- Auto-detect `cursor` and `code` CLIs on PATH, then install to all detected targets by default.
+- Download the latest `.vsix` from the VS Code Marketplace directly (does not depend on Cursor marketplace search).
+- Skip install when already present unless `--force` is used.
+
+Options:
+
+- `--cursor`: install to Cursor only
+- `--code`: install to VS Code only
+- `--force`: reinstall even if already installed
+- `--dry-run`: print what would be done without installing
+- `--vsix <path>`: install from a local VSIX file
+
 ### `xgoup self update`
 
 Update `xgoup` manager itself from release channel.

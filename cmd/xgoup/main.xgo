@@ -8,6 +8,7 @@ import (
 	"github.com/fanfeilong/xgoup/internal/bootstrap"
 	"github.com/fanfeilong/xgoup/internal/buildinfo"
 	"github.com/fanfeilong/xgoup/internal/home"
+	"github.com/fanfeilong/xgoup/internal/ide"
 	"github.com/fanfeilong/xgoup/internal/meta"
 	"github.com/fanfeilong/xgoup/internal/resolve"
 	"github.com/fanfeilong/xgoup/internal/selfupdate"
@@ -34,6 +35,7 @@ Usage:
   xgoup env [--toolchain <name>] [--shell <sh|zsh|fish|powershell>]
   xgoup doctor
   xgoup doc [--no-browser] [--repo <owner/name>]
+  xgoup ide install [--cursor] [--code] [--force] [--dry-run] [--vsix <path>]
   xgoup self install [--repo <owner/name>] [--version latest|vX.Y.Z] [--modify-path] [--zip <path>]
   xgoup self update
   xgoup self uninstall [--force]
@@ -326,6 +328,46 @@ case "doc":
 	}
 	fmt.Println "[xgoup] opened XGo spec, classfile docs, reference, demo, and tutorial"
 	os.Exit 0
+case "ide":
+	if len(rest) == 0 {
+		dieUsage("missing ide subcommand")
+	}
+	switch rest[0] {
+	case "install":
+		fs := flag.NewFlagSet("ide install", flag.ContinueOnError)
+		toCursor := fs.Bool("cursor", false, "")
+		toCode := fs.Bool("code", false, "")
+		force := fs.Bool("force", false, "")
+		dryRun := fs.Bool("dry-run", false, "")
+		vsix := fs.String("vsix", "", "")
+		_ = fs.Parse(rest[1:])
+
+		res, err := ide.InstallXGoExtension(ide.InstallOptions{
+			ToCursor: *toCursor,
+			ToCode:   *toCode,
+			Force:    *force,
+			DryRun:   *dryRun,
+			VsixPath: *vsix,
+		})
+		if err != nil {
+			die(err)
+		}
+		if *dryRun {
+			fmt.Println "[xgoup] ide install (dry-run)"
+		}
+		if res.InstalledToCursor {
+			fmt.Println "[xgoup] installed XGo extension to Cursor"
+		}
+		if res.InstalledToCode {
+			fmt.Println "[xgoup] installed XGo extension to VS Code"
+		}
+		if !res.InstalledToCursor && !res.InstalledToCode {
+			fmt.Println "[xgoup] XGo extension already installed (or no target selected)"
+		}
+		os.Exit 0
+	default:
+		dieUsage("unknown ide subcommand: " + rest[0])
+	}
 case "self":
 	if len(rest) == 0 {
 		dieUsage("missing self subcommand")

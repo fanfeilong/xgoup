@@ -64,6 +64,7 @@ Supported now:
 - `env` (`sh|zsh|fish|powershell`)
 - `doctor`
 - `doc` (open XGo spec / classfile / docs / demo / tutorial in browser)
+- `ide install` (install XGo extension to Cursor / VS Code)
 
 Also available (grouped form): `xgoup toolchain <install|update|list|remove> ...`
 
@@ -94,6 +95,14 @@ Default home: `~/.xgoup` (override with `XGOUP_HOME`)
 
 - `standard` method is platform-specific (macOS: Homebrew; Windows: official release zip; Linux: distro package manager when available).
 - `source` method uses `git clone + ./all.bash` and is the recommended path for latest XGo features.
+
+## IDE integration
+
+Install the official Go/XGo extension (`goplus.gop`) into Cursor / VS Code:
+
+```bash
+xgoup ide install
+```
 
 ## Development (run from repo checkout)
 
