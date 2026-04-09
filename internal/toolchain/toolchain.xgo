@@ -22,6 +22,9 @@ import (
 
 const DefaultSourceRepo = "https://github.com/goplus/xgo.git"
 
+const MinGoMajor = 1
+const MinGoMinor = 19
+
 type InstallOptions struct {
 	Method string
 	Repo   string
@@ -266,6 +269,10 @@ func installStandard(p home.Paths, c config.Config, name string, opt InstallOpti
 		return config.Config{}, fmt.Errorf("toolchain already exists: %s (use --force)", name)
 	}
 
+	if err := ensureGo(MinGoMajor, MinGoMinor); err != nil {
+		return config.Config{}, err
+	}
+
 	arch, err := windowsArch()
 	if err != nil {
 		return config.Config{}, err
@@ -446,6 +453,151 @@ func windowsArch() (string, error) {
 	default:
 		return "", fmt.Errorf("unsupported arch: %s", runtime.GOARCH)
 	}
+}
+
+func ensureGo(minMajor, minMinor int) error {
+	ok, got, err := haveGo(minMajor, minMinor)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return nil
+	}
+
+	// Best-effort automatic installation.
+	switch runtime.GOOS {
+	case "windows":
+		if err := installGoWindows(); err != nil {
+			return fmt.Errorf("Go is required (>= go%d.%d); not found (got: %s): %w", minMajor, minMinor, got, err)
+		}
+		if err := maybeAddGoToPathWindows(); err != nil {
+			// Keep going; this is best-effort.
+			_ = err
+		}
+	default:
+		return fmt.Errorf("Go is required (>= go%d.%d); not found (got: %s). Install Go and ensure `go` is on PATH", minMajor, minMinor, got)
+	}
+
+	ok, got, err = haveGo(minMajor, minMinor)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("Go is required (>= go%d.%d); still not available after install attempt (got: %s)", minMajor, minMinor, got)
+	}
+	return nil
+}
+
+func haveGo(minMajor, minMinor int) (ok bool, got string, err error) {
+	goExe, err := exec.LookPath("go")
+	if err != nil {
+		return false, "missing", nil
+	}
+	out, err := exec.Command(goExe, "version").CombinedOutput()
+	if err != nil {
+		return false, strings.TrimSpace(string(out)), nil
+	}
+	maj, min, ver := parseGoVersion(string(out))
+	if maj == 0 && min == 0 {
+		// Unknown format; treat as present.
+		return true, strings.TrimSpace(ver), nil
+	}
+	if maj > minMajor || (maj == minMajor && min >= minMinor) {
+		return true, ver, nil
+	}
+	return false, ver, nil
+}
+
+func parseGoVersion(s string) (major int, minor int, ver string) {
+	// Examples:
+	// - "go version go1.22.1 windows/amd64"
+	// - "go version go1.19 linux/amd64"
+	// - "go version devel go1.23-... ..."
+	f := strings.Fields(strings.TrimSpace(s))
+	for _, tok := range f {
+		if strings.HasPrefix(tok, "go1.") {
+			ver = tok
+			maj, min := parseGoMajorMinor(strings.TrimPrefix(tok, "go"))
+			return maj, min, tok
+		}
+	}
+	if len(f) > 0 {
+		ver = f[len(f)-1]
+	}
+	return 0, 0, strings.TrimSpace(s)
+}
+
+func parseGoMajorMinor(v string) (major int, minor int) {
+	// v expected like "1.22.1" or "1.22"
+	parts := strings.SplitN(v, ".", 3)
+	if len(parts) < 2 {
+		return 0, 0
+	}
+	major = atoiSafe(parts[0])
+	minor = atoiSafe(parts[1])
+	return major, minor
+}
+
+func atoiSafe(s string) int {
+	n := 0
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			break
+		}
+		n = n*10 + int(r-'0')
+	}
+	return n
+}
+
+func installGoWindows() error {
+	winget, err := exec.LookPath("winget")
+	if err != nil {
+		return errors.New("winget not found; install Go manually or install winget (App Installer)")
+	}
+	// Use official package id.
+	cmd := exec.Command(winget,
+		"install",
+		"--id", "GoLang.Go",
+		"-e",
+		"--accept-package-agreements",
+		"--accept-source-agreements",
+	)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func maybeAddGoToPathWindows() error {
+	// Common installation path: %ProgramFiles%\Go\bin\go.exe
+	root := os.Getenv("ProgramFiles")
+	if root == "" {
+		return nil
+	}
+	bin := filepath.Join(root, "Go", "bin")
+	if _, err := os.Stat(filepath.Join(bin, "go.exe")); err != nil {
+		return nil
+	}
+
+	// Update current process PATH first.
+	path := os.Getenv("PATH")
+	if !strings.Contains(strings.ToLower(path), strings.ToLower(bin)) {
+		_ = os.Setenv("PATH", bin+string(os.PathListSeparator)+path)
+	}
+
+	// Best-effort persist to User PATH so `xgo` works in new terminals.
+	ps := fmt.Sprintf(`
+$bin = '%s'
+$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+if (-not $userPath) { $userPath = '' }
+$parts = $userPath.Split(';') | Where-Object { $_ -ne '' }
+if ($parts -notcontains $bin) {
+  $newPath = if ($userPath.Trim().Length -gt 0) { "$bin;$userPath" } else { $bin }
+  [Environment]::SetEnvironmentVariable('Path', $newPath, 'User')
+}
+`, strings.ReplaceAll(bin, `'`, `''`))
+	c := exec.Command("powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps)
+	_, _ = c.CombinedOutput()
+	return nil
 }
 
 func latestXgoWindowsAsset(arch string) (tag string, asset string, err error) {

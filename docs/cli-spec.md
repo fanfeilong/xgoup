@@ -42,6 +42,11 @@ Behavior:
 - `source`: `git clone` + checkout ref (optional) + `./all.bash`.
 - `linked`: create metadata entry pointing to existing local path, no copy/build.
 
+Dependency policy:
+
+- `xgo` requires **Go >= 1.19** available as `go` on PATH.
+- `standard` install ensures this prerequisite (auto-install Go on Windows via `winget` when missing/outdated).
+
 ### `xgoup toolchain update [name]`
 
 Update one toolchain, or current default if name omitted.
