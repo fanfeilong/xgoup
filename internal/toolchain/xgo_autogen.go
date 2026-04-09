@@ -400,159 +400,173 @@ func ensureGo(minMajor int, minMinor int) error {
 			_ = err
 		}
 //line internal/toolchain/toolchain.xgo:477:1
-	default:
+	case "darwin":
 //line internal/toolchain/toolchain.xgo:478:1
-		return fmt.Errorf("Go is required (>= go%d.%d); not found (got: %s). Install Go and ensure `go` is on PATH", minMajor, minMinor, got)
-	}
+		if
+//line internal/toolchain/toolchain.xgo:478:1
+		err := installGoDarwin(); err != nil {
+//line internal/toolchain/toolchain.xgo:479:1
+			return fmt.Errorf("Go is required (>= go%d.%d); not found (got: %s): %w", minMajor, minMinor, got, err)
+		}
 //line internal/toolchain/toolchain.xgo:481:1
-	ok, got, err = haveGo(minMajor, minMinor)
+	default:
 //line internal/toolchain/toolchain.xgo:482:1
-	if err != nil {
+		if
+//line internal/toolchain/toolchain.xgo:482:1
+		err := installGoLinux(); err != nil {
 //line internal/toolchain/toolchain.xgo:483:1
+			return fmt.Errorf("Go is required (>= go%d.%d); not found (got: %s): %w", minMajor, minMinor, got, err)
+		}
+	}
+//line internal/toolchain/toolchain.xgo:487:1
+	ok, got, err = haveGo(minMajor, minMinor)
+//line internal/toolchain/toolchain.xgo:488:1
+	if err != nil {
+//line internal/toolchain/toolchain.xgo:489:1
 		return err
 	}
-//line internal/toolchain/toolchain.xgo:485:1
+//line internal/toolchain/toolchain.xgo:491:1
 	if !ok {
-//line internal/toolchain/toolchain.xgo:486:1
+//line internal/toolchain/toolchain.xgo:492:1
 		return fmt.Errorf("Go is required (>= go%d.%d); still not available after install attempt (got: %s)", minMajor, minMinor, got)
 	}
-//line internal/toolchain/toolchain.xgo:488:1
+//line internal/toolchain/toolchain.xgo:494:1
 	return nil
 }
-//line internal/toolchain/toolchain.xgo:491:1
+//line internal/toolchain/toolchain.xgo:497:1
 func haveGo(minMajor int, minMinor int) (ok bool, got string, err error) {
-//line internal/toolchain/toolchain.xgo:492:1
+//line internal/toolchain/toolchain.xgo:498:1
 	goExe, err := exec.LookPath("go")
-//line internal/toolchain/toolchain.xgo:493:1
+//line internal/toolchain/toolchain.xgo:499:1
 	if err != nil {
-//line internal/toolchain/toolchain.xgo:494:1
+//line internal/toolchain/toolchain.xgo:500:1
 		return false, "missing", nil
 	}
-//line internal/toolchain/toolchain.xgo:496:1
+//line internal/toolchain/toolchain.xgo:502:1
 	out, err := exec.Command(goExe, "version").CombinedOutput()
-//line internal/toolchain/toolchain.xgo:497:1
+//line internal/toolchain/toolchain.xgo:503:1
 	if err != nil {
-//line internal/toolchain/toolchain.xgo:498:1
+//line internal/toolchain/toolchain.xgo:504:1
 		return false, strings.TrimSpace(string(out)), nil
 	}
-//line internal/toolchain/toolchain.xgo:500:1
+//line internal/toolchain/toolchain.xgo:506:1
 	maj, min, ver := parseGoVersion(string(out))
-//line internal/toolchain/toolchain.xgo:501:1
+//line internal/toolchain/toolchain.xgo:507:1
 	if maj == 0 && min == 0 {
-//line internal/toolchain/toolchain.xgo:503:1
+//line internal/toolchain/toolchain.xgo:509:1
 		return true, strings.TrimSpace(ver), nil
 	}
-//line internal/toolchain/toolchain.xgo:505:1
+//line internal/toolchain/toolchain.xgo:511:1
 	if maj > minMajor || maj == minMajor && min >= minMinor {
-//line internal/toolchain/toolchain.xgo:506:1
+//line internal/toolchain/toolchain.xgo:512:1
 		return true, ver, nil
 	}
-//line internal/toolchain/toolchain.xgo:508:1
+//line internal/toolchain/toolchain.xgo:514:1
 	return false, ver, nil
 }
-//line internal/toolchain/toolchain.xgo:511:1
+//line internal/toolchain/toolchain.xgo:517:1
 func parseGoVersion(s string) (major int, minor int, ver string) {
-//line internal/toolchain/toolchain.xgo:516:1
+//line internal/toolchain/toolchain.xgo:522:1
 	f := strings.Fields(strings.TrimSpace(s))
 	for
-//line internal/toolchain/toolchain.xgo:517:1
+//line internal/toolchain/toolchain.xgo:523:1
 	_, tok := range f {
-//line internal/toolchain/toolchain.xgo:518:1
+//line internal/toolchain/toolchain.xgo:524:1
 		if strings.HasPrefix(tok, "go1.") {
-//line internal/toolchain/toolchain.xgo:519:1
+//line internal/toolchain/toolchain.xgo:525:1
 			ver = tok
-//line internal/toolchain/toolchain.xgo:520:1
+//line internal/toolchain/toolchain.xgo:526:1
 			maj, min := parseGoMajorMinor(strings.TrimPrefix(tok, "go"))
-//line internal/toolchain/toolchain.xgo:521:1
+//line internal/toolchain/toolchain.xgo:527:1
 			return maj, min, tok
 		}
 	}
-//line internal/toolchain/toolchain.xgo:524:1
+//line internal/toolchain/toolchain.xgo:530:1
 	if len(f) > 0 {
-//line internal/toolchain/toolchain.xgo:525:1
+//line internal/toolchain/toolchain.xgo:531:1
 		ver = f[len(f)-1]
 	}
-//line internal/toolchain/toolchain.xgo:527:1
+//line internal/toolchain/toolchain.xgo:533:1
 	return 0, 0, strings.TrimSpace(s)
 }
-//line internal/toolchain/toolchain.xgo:530:1
+//line internal/toolchain/toolchain.xgo:536:1
 func parseGoMajorMinor(v string) (major int, minor int) {
-//line internal/toolchain/toolchain.xgo:532:1
+//line internal/toolchain/toolchain.xgo:538:1
 	parts := strings.SplitN(v, ".", 3)
-//line internal/toolchain/toolchain.xgo:533:1
+//line internal/toolchain/toolchain.xgo:539:1
 	if len(parts) < 2 {
-//line internal/toolchain/toolchain.xgo:534:1
+//line internal/toolchain/toolchain.xgo:540:1
 		return 0, 0
 	}
-//line internal/toolchain/toolchain.xgo:549:1
+//line internal/toolchain/toolchain.xgo:555:1
 	major = atoiSafe(parts[0])
-//line internal/toolchain/toolchain.xgo:537:1
+//line internal/toolchain/toolchain.xgo:543:1
 	minor = atoiSafe(parts[1])
-//line internal/toolchain/toolchain.xgo:538:1
+//line internal/toolchain/toolchain.xgo:544:1
 	return major, minor
 }
-//line internal/toolchain/toolchain.xgo:541:1
+//line internal/toolchain/toolchain.xgo:547:1
 func atoiSafe(s string) int {
-//line internal/toolchain/toolchain.xgo:542:1
+//line internal/toolchain/toolchain.xgo:548:1
 	n := 0
 	for
-//line internal/toolchain/toolchain.xgo:543:1
+//line internal/toolchain/toolchain.xgo:549:1
 	_, r := range s {
-//line internal/toolchain/toolchain.xgo:544:1
+//line internal/toolchain/toolchain.xgo:550:1
 		if r < '0' || r > '9' {
-//line internal/toolchain/toolchain.xgo:545:1
+//line internal/toolchain/toolchain.xgo:551:1
 			break
 		}
-//line internal/toolchain/toolchain.xgo:547:1
+//line internal/toolchain/toolchain.xgo:553:1
 		n = n*10 + int(r-'0')
 	}
-//line internal/toolchain/toolchain.xgo:549:1
+//line internal/toolchain/toolchain.xgo:555:1
 	return n
 }
-//line internal/toolchain/toolchain.xgo:552:1
+//line internal/toolchain/toolchain.xgo:558:1
 func installGoWindows() error {
-//line internal/toolchain/toolchain.xgo:553:1
+//line internal/toolchain/toolchain.xgo:559:1
 	winget, err := exec.LookPath("winget")
-//line internal/toolchain/toolchain.xgo:554:1
+//line internal/toolchain/toolchain.xgo:560:1
 	if err != nil {
-//line internal/toolchain/toolchain.xgo:555:1
+//line internal/toolchain/toolchain.xgo:561:1
 		return errors.New("winget not found; install Go manually or install winget (App Installer)")
 	}
-//line internal/toolchain/toolchain.xgo:558:1
+//line internal/toolchain/toolchain.xgo:564:1
 	cmd := exec.Command(winget, "install", "--id", "GoLang.Go", "-e", "--accept-package-agreements", "--accept-source-agreements")
-//line internal/toolchain/toolchain.xgo:565:1
+//line internal/toolchain/toolchain.xgo:571:1
 	cmd.Stdout = os.Stdout
-//line internal/toolchain/toolchain.xgo:566:1
+//line internal/toolchain/toolchain.xgo:572:1
 	cmd.Stderr = os.Stderr
-//line internal/toolchain/toolchain.xgo:567:1
+//line internal/toolchain/toolchain.xgo:573:1
 	return cmd.Run()
 }
-//line internal/toolchain/toolchain.xgo:570:1
-func maybeAddGoToPathWindows() error {
-//line internal/toolchain/toolchain.xgo:572:1
-	root := os.Getenv("ProgramFiles")
-//line internal/toolchain/toolchain.xgo:573:1
-	if root == "" {
-//line internal/toolchain/toolchain.xgo:574:1
-		return nil
-	}
 //line internal/toolchain/toolchain.xgo:576:1
-	bin := filepath.Join(root, "Go", "bin")
-//line internal/toolchain/toolchain.xgo:577:1
-	if
-//line internal/toolchain/toolchain.xgo:577:1
-	_, err := os.Stat(filepath.Join(bin, "go.exe")); err != nil {
+func maybeAddGoToPathWindows() error {
 //line internal/toolchain/toolchain.xgo:578:1
+	root := os.Getenv("ProgramFiles")
+//line internal/toolchain/toolchain.xgo:579:1
+	if root == "" {
+//line internal/toolchain/toolchain.xgo:580:1
 		return nil
 	}
 //line internal/toolchain/toolchain.xgo:582:1
-	path := os.Getenv("PATH")
+	bin := filepath.Join(root, "Go", "bin")
 //line internal/toolchain/toolchain.xgo:583:1
-	if !strings.Contains(strings.ToLower(path), strings.ToLower(bin)) {
+	if
+//line internal/toolchain/toolchain.xgo:583:1
+	_, err := os.Stat(filepath.Join(bin, "go.exe")); err != nil {
 //line internal/toolchain/toolchain.xgo:584:1
-		_ = os.Setenv("PATH", bin+string(os.PathListSeparator)+path)
+		return nil
 	}
 //line internal/toolchain/toolchain.xgo:588:1
+	path := os.Getenv("PATH")
+//line internal/toolchain/toolchain.xgo:589:1
+	if !strings.Contains(strings.ToLower(path), strings.ToLower(bin)) {
+//line internal/toolchain/toolchain.xgo:590:1
+		_ = os.Setenv("PATH", bin+string(os.PathListSeparator)+path)
+	}
+//line internal/toolchain/toolchain.xgo:594:1
 	ps := fmt.Sprintf(`
 $bin = '%s'
 $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
@@ -563,12 +577,110 @@ if ($parts -notcontains $bin) {
   [Environment]::SetEnvironmentVariable('Path', $newPath, 'User')
 }
 `, strings.ReplaceAll(bin, `'`, `''`))
-//line internal/toolchain/toolchain.xgo:598:1
+//line internal/toolchain/toolchain.xgo:604:1
 	c := exec.Command("powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps)
-//line internal/toolchain/toolchain.xgo:599:1
+//line internal/toolchain/toolchain.xgo:605:1
 	_, _ = c.CombinedOutput()
-//line internal/toolchain/toolchain.xgo:600:1
+//line internal/toolchain/toolchain.xgo:606:1
 	return nil
+}
+//line internal/toolchain/toolchain.xgo:609:1
+func installGoDarwin() error {
+//line internal/toolchain/toolchain.xgo:610:1
+	brew, err := exec.LookPath("brew")
+//line internal/toolchain/toolchain.xgo:611:1
+	if err != nil {
+//line internal/toolchain/toolchain.xgo:612:1
+		return errors.New("Homebrew (brew) not found; install Go manually or install brew first")
+	}
+//line internal/toolchain/toolchain.xgo:616:1
+	cmd := exec.Command(brew, "install", "go")
+//line internal/toolchain/toolchain.xgo:617:1
+	cmd.Stdout = os.Stdout
+//line internal/toolchain/toolchain.xgo:618:1
+	cmd.Stderr = os.Stderr
+//line internal/toolchain/toolchain.xgo:619:1
+	if
+//line internal/toolchain/toolchain.xgo:619:1
+	err := cmd.Run(); err == nil {
+//line internal/toolchain/toolchain.xgo:620:1
+		return nil
+	}
+//line internal/toolchain/toolchain.xgo:622:1
+	up := exec.Command(brew, "upgrade", "go")
+//line internal/toolchain/toolchain.xgo:623:1
+	up.Stdout = os.Stdout
+//line internal/toolchain/toolchain.xgo:624:1
+	up.Stderr = os.Stderr
+//line internal/toolchain/toolchain.xgo:625:1
+	return up.Run()
+}
+//line internal/toolchain/toolchain.xgo:628:1
+func installGoLinux() error {
+//line internal/toolchain/toolchain.xgo:630:1
+	run := func(name string, args ...string) error {
+//line internal/toolchain/toolchain.xgo:631:1
+		cmd := exec.Command(name, args...) 
+//line internal/toolchain/toolchain.xgo:632:1
+		cmd.Stdout = os.Stdout
+//line internal/toolchain/toolchain.xgo:633:1
+		cmd.Stderr = os.Stderr
+//line internal/toolchain/toolchain.xgo:634:1
+		return cmd.Run()
+	}
+//line internal/toolchain/toolchain.xgo:636:1
+	withSudo := func(args ...string) error {
+//line internal/toolchain/toolchain.xgo:637:1
+		sudo, err := exec.LookPath("sudo")
+//line internal/toolchain/toolchain.xgo:638:1
+		if err == nil {
+//line internal/toolchain/toolchain.xgo:639:1
+			return run(sudo, args...)
+		}
+//line internal/toolchain/toolchain.xgo:642:1
+		return run(args[0], args[1:]...)
+	}
+//line internal/toolchain/toolchain.xgo:646:1
+	if
+//line internal/toolchain/toolchain.xgo:646:1
+	_, err := exec.LookPath("apt-get"); err == nil {
+//line internal/toolchain/toolchain.xgo:647:1
+		_ = withSudo("apt-get", "update", "-y")
+//line internal/toolchain/toolchain.xgo:648:1
+		return withSudo("apt-get", "install", "-y", "golang")
+	}
+//line internal/toolchain/toolchain.xgo:651:1
+	if
+//line internal/toolchain/toolchain.xgo:651:1
+	_, err := exec.LookPath("dnf"); err == nil {
+//line internal/toolchain/toolchain.xgo:652:1
+		return withSudo("dnf", "install", "-y", "golang")
+	}
+//line internal/toolchain/toolchain.xgo:655:1
+	if
+//line internal/toolchain/toolchain.xgo:655:1
+	_, err := exec.LookPath("yum"); err == nil {
+//line internal/toolchain/toolchain.xgo:656:1
+		return withSudo("yum", "install", "-y", "golang")
+	}
+//line internal/toolchain/toolchain.xgo:659:1
+	if
+//line internal/toolchain/toolchain.xgo:659:1
+	_, err := exec.LookPath("apk"); err == nil {
+//line internal/toolchain/toolchain.xgo:660:1
+		_ = withSudo("apk", "update")
+//line internal/toolchain/toolchain.xgo:661:1
+		return withSudo("apk", "add", "go")
+	}
+//line internal/toolchain/toolchain.xgo:664:1
+	if
+//line internal/toolchain/toolchain.xgo:664:1
+	_, err := exec.LookPath("pacman"); err == nil {
+//line internal/toolchain/toolchain.xgo:665:1
+		return withSudo("pacman", "-Sy", "--noconfirm", "go")
+	}
+//line internal/toolchain/toolchain.xgo:668:1
+	return errors.New("no supported package manager found (need apt-get/dnf/yum/apk/pacman); install Go manually")
 }
 //line internal/toolchain/toolchain.xgo:447:1
 func windowsArch() (string, error) {
@@ -588,354 +700,354 @@ func windowsArch() (string, error) {
 		return "", fmt.Errorf("unsupported arch: %s", runtime.GOARCH)
 	}
 }
-//line internal/toolchain/toolchain.xgo:603:1
+//line internal/toolchain/toolchain.xgo:671:1
 func latestXgoWindowsAsset(arch string) (tag string, asset string, err error) {
-//line internal/toolchain/toolchain.xgo:604:1
+//line internal/toolchain/toolchain.xgo:672:1
 	req, err := http.NewRequest("GET", "https://api.github.com/repos/goplus/xgo/releases/latest", nil)
-//line internal/toolchain/toolchain.xgo:605:1
+//line internal/toolchain/toolchain.xgo:673:1
 	if err != nil {
-//line internal/toolchain/toolchain.xgo:606:1
+//line internal/toolchain/toolchain.xgo:674:1
 		return "", "", err
 	}
-//line internal/toolchain/toolchain.xgo:608:1
+//line internal/toolchain/toolchain.xgo:676:1
 	req.Header.Set("Accept", "application/vnd.github+json")
-//line internal/toolchain/toolchain.xgo:609:1
+//line internal/toolchain/toolchain.xgo:677:1
 	req.Header.Set("User-Agent", "xgoup")
-//line internal/toolchain/toolchain.xgo:610:1
+//line internal/toolchain/toolchain.xgo:678:1
 	if
-//line internal/toolchain/toolchain.xgo:610:1
+//line internal/toolchain/toolchain.xgo:678:1
 	tok := os.Getenv("GITHUB_TOKEN"); tok != "" {
-//line internal/toolchain/toolchain.xgo:611:1
+//line internal/toolchain/toolchain.xgo:679:1
 		req.Header.Set("Authorization", "Bearer "+tok)
 	}
-//line internal/toolchain/toolchain.xgo:613:1
+//line internal/toolchain/toolchain.xgo:681:1
 	client := &http.Client{Timeout: 30 * time.Second}
-//line internal/toolchain/toolchain.xgo:614:1
+//line internal/toolchain/toolchain.xgo:682:1
 	resp, err := client.Do(req)
-//line internal/toolchain/toolchain.xgo:615:1
+//line internal/toolchain/toolchain.xgo:683:1
 	if err != nil {
-//line internal/toolchain/toolchain.xgo:616:1
+//line internal/toolchain/toolchain.xgo:684:1
 		return "", "", err
 	}
-//line internal/toolchain/toolchain.xgo:618:1
+//line internal/toolchain/toolchain.xgo:686:1
 	defer resp.Body.Close()
-//line internal/toolchain/toolchain.xgo:619:1
+//line internal/toolchain/toolchain.xgo:687:1
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-//line internal/toolchain/toolchain.xgo:620:1
+//line internal/toolchain/toolchain.xgo:688:1
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-//line internal/toolchain/toolchain.xgo:621:1
+//line internal/toolchain/toolchain.xgo:689:1
 		return "", "", fmt.Errorf("GET %s: status=%s body=%q", req.URL.String(), resp.Status, string(b))
 	}
-//line internal/toolchain/toolchain.xgo:623:1
+//line internal/toolchain/toolchain.xgo:691:1
 	b, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-//line internal/toolchain/toolchain.xgo:624:1
+//line internal/toolchain/toolchain.xgo:692:1
 	if err != nil {
-//line internal/toolchain/toolchain.xgo:625:1
+//line internal/toolchain/toolchain.xgo:693:1
 		return "", "", err
 	}
-//line internal/toolchain/toolchain.xgo:627:1
+//line internal/toolchain/toolchain.xgo:695:1
 	var v struct {
 		Tag string `json:"tag_name"`
 	}
-//line internal/toolchain/toolchain.xgo:630:1
+//line internal/toolchain/toolchain.xgo:698:1
 	if
-//line internal/toolchain/toolchain.xgo:630:1
+//line internal/toolchain/toolchain.xgo:698:1
 	err := json.Unmarshal(b, &v); err != nil {
-//line internal/toolchain/toolchain.xgo:631:1
+//line internal/toolchain/toolchain.xgo:699:1
 		return "", "", err
 	}
-//line internal/toolchain/toolchain.xgo:633:1
+//line internal/toolchain/toolchain.xgo:701:1
 	if v.Tag == "" {
-//line internal/toolchain/toolchain.xgo:634:1
+//line internal/toolchain/toolchain.xgo:702:1
 		return "", "", errors.New("failed to resolve xgo latest release tag")
 	}
-//line internal/toolchain/toolchain.xgo:636:1
+//line internal/toolchain/toolchain.xgo:704:1
 	ver := strings.TrimPrefix(v.Tag, "v")
-//line internal/toolchain/toolchain.xgo:637:1
+//line internal/toolchain/toolchain.xgo:705:1
 	return v.Tag, fmt.Sprintf("xgo%s.windows-%s.zip", ver, arch), nil
 }
-//line internal/toolchain/toolchain.xgo:640:1
+//line internal/toolchain/toolchain.xgo:708:1
 func httpGetToFile(url string, path string) error {
-//line internal/toolchain/toolchain.xgo:641:1
+//line internal/toolchain/toolchain.xgo:709:1
 	req, err := http.NewRequest("GET", url, nil)
-//line internal/toolchain/toolchain.xgo:642:1
+//line internal/toolchain/toolchain.xgo:710:1
 	if err != nil {
-//line internal/toolchain/toolchain.xgo:643:1
+//line internal/toolchain/toolchain.xgo:711:1
 		return err
 	}
-//line internal/toolchain/toolchain.xgo:645:1
+//line internal/toolchain/toolchain.xgo:713:1
 	req.Header.Set("User-Agent", "xgoup")
-//line internal/toolchain/toolchain.xgo:646:1
+//line internal/toolchain/toolchain.xgo:714:1
 	req.Header.Set("Accept", "application/octet-stream")
-//line internal/toolchain/toolchain.xgo:647:1
+//line internal/toolchain/toolchain.xgo:715:1
 	client := &http.Client{Timeout: 120 * time.Second}
-//line internal/toolchain/toolchain.xgo:648:1
+//line internal/toolchain/toolchain.xgo:716:1
 	resp, err := client.Do(req)
-//line internal/toolchain/toolchain.xgo:649:1
+//line internal/toolchain/toolchain.xgo:717:1
 	if err != nil {
-//line internal/toolchain/toolchain.xgo:650:1
+//line internal/toolchain/toolchain.xgo:718:1
 		return err
 	}
-//line internal/toolchain/toolchain.xgo:652:1
+//line internal/toolchain/toolchain.xgo:720:1
 	defer resp.Body.Close()
-//line internal/toolchain/toolchain.xgo:653:1
+//line internal/toolchain/toolchain.xgo:721:1
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-//line internal/toolchain/toolchain.xgo:654:1
+//line internal/toolchain/toolchain.xgo:722:1
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-//line internal/toolchain/toolchain.xgo:655:1
+//line internal/toolchain/toolchain.xgo:723:1
 		return fmt.Errorf("GET %s: status=%s body=%q", url, resp.Status, string(b))
 	}
-//line internal/toolchain/toolchain.xgo:657:1
+//line internal/toolchain/toolchain.xgo:725:1
 	f, err := os.Create(path)
-//line internal/toolchain/toolchain.xgo:658:1
+//line internal/toolchain/toolchain.xgo:726:1
 	if err != nil {
-//line internal/toolchain/toolchain.xgo:659:1
+//line internal/toolchain/toolchain.xgo:727:1
 		return err
 	}
-//line internal/toolchain/toolchain.xgo:661:1
+//line internal/toolchain/toolchain.xgo:729:1
 	defer f.Close()
-//line internal/toolchain/toolchain.xgo:662:1
+//line internal/toolchain/toolchain.xgo:730:1
 	_, err = io.Copy(f, resp.Body)
-//line internal/toolchain/toolchain.xgo:663:1
+//line internal/toolchain/toolchain.xgo:731:1
 	return err
 }
-//line internal/toolchain/toolchain.xgo:666:1
+//line internal/toolchain/toolchain.xgo:734:1
 func unzipAll(zipPath string, destDir string) error {
-//line internal/toolchain/toolchain.xgo:667:1
+//line internal/toolchain/toolchain.xgo:735:1
 	r, err := zip.OpenReader(zipPath)
-//line internal/toolchain/toolchain.xgo:668:1
+//line internal/toolchain/toolchain.xgo:736:1
 	if err != nil {
-//line internal/toolchain/toolchain.xgo:669:1
+//line internal/toolchain/toolchain.xgo:737:1
 		return err
 	}
-//line internal/toolchain/toolchain.xgo:671:1
+//line internal/toolchain/toolchain.xgo:739:1
 	defer r.Close()
-//line internal/toolchain/toolchain.xgo:672:1
+//line internal/toolchain/toolchain.xgo:740:1
 	if
-//line internal/toolchain/toolchain.xgo:672:1
+//line internal/toolchain/toolchain.xgo:740:1
 	err := os.MkdirAll(destDir, 0o755); err != nil {
-//line internal/toolchain/toolchain.xgo:673:1
+//line internal/toolchain/toolchain.xgo:741:1
 		return err
 	}
 	for
-//line internal/toolchain/toolchain.xgo:675:1
+//line internal/toolchain/toolchain.xgo:743:1
 	_, f := range r.File {
-//line internal/toolchain/toolchain.xgo:676:1
+//line internal/toolchain/toolchain.xgo:744:1
 		p := filepath.Join(destDir, filepath.FromSlash(f.Name))
-//line internal/toolchain/toolchain.xgo:677:1
+//line internal/toolchain/toolchain.xgo:745:1
 		if f.FileInfo().IsDir() {
-//line internal/toolchain/toolchain.xgo:678:1
+//line internal/toolchain/toolchain.xgo:746:1
 			if
-//line internal/toolchain/toolchain.xgo:678:1
+//line internal/toolchain/toolchain.xgo:746:1
 			err := os.MkdirAll(p, 0o755); err != nil {
-//line internal/toolchain/toolchain.xgo:679:1
+//line internal/toolchain/toolchain.xgo:747:1
 				return err
 			}
-//line internal/toolchain/toolchain.xgo:681:1
+//line internal/toolchain/toolchain.xgo:749:1
 			continue
 		}
-//line internal/toolchain/toolchain.xgo:683:1
+//line internal/toolchain/toolchain.xgo:751:1
 		if
-//line internal/toolchain/toolchain.xgo:683:1
+//line internal/toolchain/toolchain.xgo:751:1
 		err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-//line internal/toolchain/toolchain.xgo:684:1
+//line internal/toolchain/toolchain.xgo:752:1
 			return err
 		}
-//line internal/toolchain/toolchain.xgo:686:1
+//line internal/toolchain/toolchain.xgo:754:1
 		rc, err := f.Open()
-//line internal/toolchain/toolchain.xgo:687:1
+//line internal/toolchain/toolchain.xgo:755:1
 		if err != nil {
-//line internal/toolchain/toolchain.xgo:688:1
+//line internal/toolchain/toolchain.xgo:756:1
 			return err
 		}
-//line internal/toolchain/toolchain.xgo:690:1
+//line internal/toolchain/toolchain.xgo:758:1
 		out, err := os.Create(p)
-//line internal/toolchain/toolchain.xgo:691:1
+//line internal/toolchain/toolchain.xgo:759:1
 		if err != nil {
-//line internal/toolchain/toolchain.xgo:692:1
+//line internal/toolchain/toolchain.xgo:760:1
 			rc.Close()
-//line internal/toolchain/toolchain.xgo:693:1
+//line internal/toolchain/toolchain.xgo:761:1
 			return err
 		}
-//line internal/toolchain/toolchain.xgo:695:1
+//line internal/toolchain/toolchain.xgo:763:1
 		if
-//line internal/toolchain/toolchain.xgo:695:1
+//line internal/toolchain/toolchain.xgo:763:1
 		_, err := io.Copy(out, rc); err != nil {
-//line internal/toolchain/toolchain.xgo:696:1
+//line internal/toolchain/toolchain.xgo:764:1
 			out.Close()
-//line internal/toolchain/toolchain.xgo:697:1
+//line internal/toolchain/toolchain.xgo:765:1
 			rc.Close()
-//line internal/toolchain/toolchain.xgo:698:1
+//line internal/toolchain/toolchain.xgo:766:1
 			return err
 		}
-//line internal/toolchain/toolchain.xgo:700:1
+//line internal/toolchain/toolchain.xgo:768:1
 		out.Close()
-//line internal/toolchain/toolchain.xgo:701:1
+//line internal/toolchain/toolchain.xgo:769:1
 		rc.Close()
 	}
-//line internal/toolchain/toolchain.xgo:703:1
+//line internal/toolchain/toolchain.xgo:771:1
 	return nil
 }
-//line internal/toolchain/toolchain.xgo:706:1
+//line internal/toolchain/toolchain.xgo:774:1
 func findXgoAndRoot(root string) (xgoExe string, xgoRoot string, err error) {
-//line internal/toolchain/toolchain.xgo:707:1
+//line internal/toolchain/toolchain.xgo:775:1
 	// locate xgo.exe
 	var found string
-//line internal/toolchain/toolchain.xgo:709:1
+//line internal/toolchain/toolchain.xgo:777:1
 	err = filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
-//line internal/toolchain/toolchain.xgo:710:1
+//line internal/toolchain/toolchain.xgo:778:1
 		if err != nil {
-//line internal/toolchain/toolchain.xgo:711:1
+//line internal/toolchain/toolchain.xgo:779:1
 			return err
 		}
-//line internal/toolchain/toolchain.xgo:713:1
+//line internal/toolchain/toolchain.xgo:781:1
 		if d.IsDir() {
-//line internal/toolchain/toolchain.xgo:714:1
+//line internal/toolchain/toolchain.xgo:782:1
 			return nil
 		}
-//line internal/toolchain/toolchain.xgo:716:1
+//line internal/toolchain/toolchain.xgo:784:1
 		if strings.EqualFold(d.Name(), "xgo.exe") {
-//line internal/toolchain/toolchain.xgo:717:1
+//line internal/toolchain/toolchain.xgo:785:1
 			found = p
-//line internal/toolchain/toolchain.xgo:718:1
+//line internal/toolchain/toolchain.xgo:786:1
 			return errFound
 		}
-//line internal/toolchain/toolchain.xgo:720:1
+//line internal/toolchain/toolchain.xgo:788:1
 		return nil
 	})
-//line internal/toolchain/toolchain.xgo:722:1
+//line internal/toolchain/toolchain.xgo:790:1
 	if err != nil && !errors.Is(err, errFound) {
-//line internal/toolchain/toolchain.xgo:723:1
+//line internal/toolchain/toolchain.xgo:791:1
 		return "", "", err
 	}
-//line internal/toolchain/toolchain.xgo:725:1
+//line internal/toolchain/toolchain.xgo:793:1
 	if found == "" {
-//line internal/toolchain/toolchain.xgo:726:1
+//line internal/toolchain/toolchain.xgo:794:1
 		return "", "", errors.New("xgo.exe not found after extraction/build")
 	}
-//line internal/toolchain/toolchain.xgo:728:1
+//line internal/toolchain/toolchain.xgo:796:1
 	binDir := filepath.Dir(found)
-//line internal/toolchain/toolchain.xgo:729:1
+//line internal/toolchain/toolchain.xgo:797:1
 	cand := binDir
-//line internal/toolchain/toolchain.xgo:730:1
+//line internal/toolchain/toolchain.xgo:798:1
 	if strings.EqualFold(filepath.Base(binDir), "bin") {
-//line internal/toolchain/toolchain.xgo:731:1
+//line internal/toolchain/toolchain.xgo:799:1
 		cand = filepath.Dir(binDir)
 	}
-//line internal/toolchain/toolchain.xgo:734:1
+//line internal/toolchain/toolchain.xgo:802:1
 	isValid := func(d string) bool {
-//line internal/toolchain/toolchain.xgo:735:1
+//line internal/toolchain/toolchain.xgo:803:1
 		if d == "" {
-//line internal/toolchain/toolchain.xgo:736:1
+//line internal/toolchain/toolchain.xgo:804:1
 			return false
 		}
-//line internal/toolchain/toolchain.xgo:738:1
+//line internal/toolchain/toolchain.xgo:806:1
 		if
-//line internal/toolchain/toolchain.xgo:738:1
+//line internal/toolchain/toolchain.xgo:806:1
 		_, err := os.Stat(filepath.Join(d, "bin", "xgo.exe")); err != nil {
-//line internal/toolchain/toolchain.xgo:739:1
+//line internal/toolchain/toolchain.xgo:807:1
 			return false
 		}
-//line internal/toolchain/toolchain.xgo:741:1
+//line internal/toolchain/toolchain.xgo:809:1
 		if
-//line internal/toolchain/toolchain.xgo:741:1
+//line internal/toolchain/toolchain.xgo:809:1
 		_, err := os.Stat(filepath.Join(d, "pkg")); err == nil {
-//line internal/toolchain/toolchain.xgo:742:1
+//line internal/toolchain/toolchain.xgo:810:1
 			return true
 		}
-//line internal/toolchain/toolchain.xgo:744:1
+//line internal/toolchain/toolchain.xgo:812:1
 		if
-//line internal/toolchain/toolchain.xgo:744:1
+//line internal/toolchain/toolchain.xgo:812:1
 		_, err := os.Stat(filepath.Join(d, "src")); err == nil {
-//line internal/toolchain/toolchain.xgo:745:1
+//line internal/toolchain/toolchain.xgo:813:1
 			return true
 		}
-//line internal/toolchain/toolchain.xgo:747:1
+//line internal/toolchain/toolchain.xgo:815:1
 		if
-//line internal/toolchain/toolchain.xgo:747:1
+//line internal/toolchain/toolchain.xgo:815:1
 		_, err := os.Stat(filepath.Join(d, "all.bash")); err == nil {
-//line internal/toolchain/toolchain.xgo:748:1
+//line internal/toolchain/toolchain.xgo:816:1
 			return true
 		}
-//line internal/toolchain/toolchain.xgo:750:1
+//line internal/toolchain/toolchain.xgo:818:1
 		return false
 	}
-//line internal/toolchain/toolchain.xgo:752:1
+//line internal/toolchain/toolchain.xgo:820:1
 	for !isValid(cand) {
-//line internal/toolchain/toolchain.xgo:753:1
+//line internal/toolchain/toolchain.xgo:821:1
 		parent := filepath.Dir(cand)
-//line internal/toolchain/toolchain.xgo:754:1
+//line internal/toolchain/toolchain.xgo:822:1
 		if parent == cand {
-//line internal/toolchain/toolchain.xgo:755:1
+//line internal/toolchain/toolchain.xgo:823:1
 			break
 		}
-//line internal/toolchain/toolchain.xgo:757:1
+//line internal/toolchain/toolchain.xgo:825:1
 		cand = parent
 	}
-//line internal/toolchain/toolchain.xgo:759:1
+//line internal/toolchain/toolchain.xgo:827:1
 	if !isValid(cand) {
-//line internal/toolchain/toolchain.xgo:760:1
+//line internal/toolchain/toolchain.xgo:828:1
 		return found, cand, fmt.Errorf("XGOROOT (%s) is not valid", cand)
 	}
-//line internal/toolchain/toolchain.xgo:762:1
+//line internal/toolchain/toolchain.xgo:830:1
 	return found, cand, nil
 }
 
 var errFound = errors.New("found")
-//line internal/toolchain/toolchain.xgo:767:1
+//line internal/toolchain/toolchain.xgo:835:1
 func detectVersionFromXgo(xgoExe string, xgoRoot string) string {
-//line internal/toolchain/toolchain.xgo:770:1
+//line internal/toolchain/toolchain.xgo:838:1
 	cmd := exec.Command(xgoExe, "version")
-//line internal/toolchain/toolchain.xgo:790:1
+//line internal/toolchain/toolchain.xgo:858:1
 	cmd.Env = envForXgoCLI(xgoRoot)
-//line internal/toolchain/toolchain.xgo:772:1
+//line internal/toolchain/toolchain.xgo:840:1
 	out, _ := cmd.CombinedOutput()
-//line internal/toolchain/toolchain.xgo:773:1
+//line internal/toolchain/toolchain.xgo:841:1
 	s := strings.TrimSpace(string(out))
-//line internal/toolchain/toolchain.xgo:774:1
+//line internal/toolchain/toolchain.xgo:842:1
 	if s == "" {
-//line internal/toolchain/toolchain.xgo:775:1
+//line internal/toolchain/toolchain.xgo:843:1
 		return ""
 	}
-//line internal/toolchain/toolchain.xgo:777:1
+//line internal/toolchain/toolchain.xgo:845:1
 	parts := strings.Fields(s)
-//line internal/toolchain/toolchain.xgo:778:1
+//line internal/toolchain/toolchain.xgo:846:1
 	if len(parts) == 0 {
-//line internal/toolchain/toolchain.xgo:779:1
+//line internal/toolchain/toolchain.xgo:847:1
 		return ""
 	}
-//line internal/toolchain/toolchain.xgo:781:1
+//line internal/toolchain/toolchain.xgo:849:1
 	return strings.Join(parts, " ")
 }
-//line internal/toolchain/toolchain.xgo:784:1
+//line internal/toolchain/toolchain.xgo:852:1
 // envForXgoCLI returns process env without a bogus XGOROOT, then sets XGOROOT when known.
 func envForXgoCLI(xgoRoot string) []string {
-//line internal/toolchain/toolchain.xgo:786:1
+//line internal/toolchain/toolchain.xgo:854:1
 	out := stripXGOROOTFromEnviron()
-//line internal/toolchain/toolchain.xgo:787:1
+//line internal/toolchain/toolchain.xgo:855:1
 	if xgoRoot != "" {
-//line internal/toolchain/toolchain.xgo:788:1
+//line internal/toolchain/toolchain.xgo:856:1
 		out = append(out, "XGOROOT="+xgoRoot)
 	}
-//line internal/toolchain/toolchain.xgo:790:1
+//line internal/toolchain/toolchain.xgo:858:1
 	return out
 }
-//line internal/toolchain/toolchain.xgo:793:1
+//line internal/toolchain/toolchain.xgo:861:1
 func stripXGOROOTFromEnviron() []string {
-//line internal/toolchain/toolchain.xgo:794:1
+//line internal/toolchain/toolchain.xgo:862:1
 	var out []string
 	for
-//line internal/toolchain/toolchain.xgo:795:1
+//line internal/toolchain/toolchain.xgo:863:1
 	_, e := range os.Environ() {
-//line internal/toolchain/toolchain.xgo:796:1
+//line internal/toolchain/toolchain.xgo:864:1
 		if strings.HasPrefix(strings.ToUpper(e), "XGOROOT=") {
-//line internal/toolchain/toolchain.xgo:797:1
+//line internal/toolchain/toolchain.xgo:865:1
 			continue
 		}
-//line internal/toolchain/toolchain.xgo:799:1
+//line internal/toolchain/toolchain.xgo:867:1
 		out = append(out, e)
 	}
-//line internal/toolchain/toolchain.xgo:801:1
+//line internal/toolchain/toolchain.xgo:869:1
 	return out
 }
 //line internal/toolchain/toolchain.xgo:230:1
@@ -1097,59 +1209,59 @@ func installSource(p home.Paths, c config.Config, name string, opt InstallOption
 //line internal/toolchain/toolchain.xgo:399:1
 	return c, nil
 }
-//line internal/toolchain/toolchain.xgo:804:1
+//line internal/toolchain/toolchain.xgo:872:1
 func findBash() (string, error) {
-//line internal/toolchain/toolchain.xgo:805:1
+//line internal/toolchain/toolchain.xgo:873:1
 	if
-//line internal/toolchain/toolchain.xgo:805:1
+//line internal/toolchain/toolchain.xgo:873:1
 	p, err := exec.LookPath("bash.exe"); err == nil {
-//line internal/toolchain/toolchain.xgo:806:1
+//line internal/toolchain/toolchain.xgo:874:1
 		return p, nil
 	}
-//line internal/toolchain/toolchain.xgo:808:1
+//line internal/toolchain/toolchain.xgo:876:1
 	if
-//line internal/toolchain/toolchain.xgo:808:1
+//line internal/toolchain/toolchain.xgo:876:1
 	p, err := exec.LookPath("bash"); err == nil {
-//line internal/toolchain/toolchain.xgo:809:1
+//line internal/toolchain/toolchain.xgo:877:1
 		return p, nil
 	}
-//line internal/toolchain/toolchain.xgo:812:1
+//line internal/toolchain/toolchain.xgo:880:1
 	common := []string{filepath.Join(os.Getenv("ProgramFiles"), "Git", "bin", "bash.exe"), filepath.Join(os.Getenv("ProgramFiles(x86)"), "Git", "bin", "bash.exe")}
 	for
-//line internal/toolchain/toolchain.xgo:816:1
+//line internal/toolchain/toolchain.xgo:884:1
 	_, p := range common {
-//line internal/toolchain/toolchain.xgo:817:1
+//line internal/toolchain/toolchain.xgo:885:1
 		if p == "" {
-//line internal/toolchain/toolchain.xgo:818:1
+//line internal/toolchain/toolchain.xgo:886:1
 			continue
 		}
-//line internal/toolchain/toolchain.xgo:820:1
+//line internal/toolchain/toolchain.xgo:888:1
 		if
-//line internal/toolchain/toolchain.xgo:820:1
+//line internal/toolchain/toolchain.xgo:888:1
 		_, err := os.Stat(p); err == nil {
-//line internal/toolchain/toolchain.xgo:821:1
+//line internal/toolchain/toolchain.xgo:889:1
 			return p, nil
 		}
 	}
-//line internal/toolchain/toolchain.xgo:824:1
+//line internal/toolchain/toolchain.xgo:892:1
 	return "", errors.New("bash.exe not found; install Git for Windows (Git-Bash) or MSYS2 and ensure bash is on PATH")
 }
-//line internal/toolchain/toolchain.xgo:827:1
+//line internal/toolchain/toolchain.xgo:895:1
 func execCmd(dir string, exe string, args ...string) error {
-//line internal/toolchain/toolchain.xgo:828:1
+//line internal/toolchain/toolchain.xgo:896:1
 	cmd := exec.Command(exe, args...) 
-//line internal/toolchain/toolchain.xgo:829:1
+//line internal/toolchain/toolchain.xgo:897:1
 	if dir != "" {
-//line internal/toolchain/toolchain.xgo:830:1
+//line internal/toolchain/toolchain.xgo:898:1
 		cmd.Dir = dir
 	}
-//line internal/toolchain/toolchain.xgo:832:1
+//line internal/toolchain/toolchain.xgo:900:1
 	cmd.Env = stripXGOROOTFromEnviron()
-//line internal/toolchain/toolchain.xgo:833:1
+//line internal/toolchain/toolchain.xgo:901:1
 	cmd.Stdout = os.Stdout
-//line internal/toolchain/toolchain.xgo:834:1
+//line internal/toolchain/toolchain.xgo:902:1
 	cmd.Stderr = os.Stderr
-//line internal/toolchain/toolchain.xgo:835:1
+//line internal/toolchain/toolchain.xgo:903:1
 	return cmd.Run()
 }
 //line internal/toolchain/toolchain.xgo:184:1

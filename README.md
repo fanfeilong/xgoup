@@ -51,7 +51,7 @@ curl.exe -fsSL "https://github.com/fanfeilong/xgoup/releases/latest/download/xgo
 $zip="$env:TEMP\xgoup-win.zip"; curl.exe -fsSL "https://github.com/fanfeilong/xgoup/releases/latest/download/xgoup-windows-amd64.zip" -o $zip; $d=Join-Path $env:TEMP xgoup-extract; Remove-Item -Recurse -Force $d -ErrorAction SilentlyContinue; Expand-Archive -Path $zip -DestinationPath $d -Force; & (Join-Path $d xgoup.exe) self install -modify-path=true
 ```
 
-Note: `xgo` requires **Go >= 1.19** on PATH. `xgoup toolchain install --method standard` will auto-install Go on Windows (via `winget`) when missing/outdated.
+Note: `xgo` requires **Go >= 1.19** on PATH. `xgoup toolchain install --method standard` will auto-install Go when missing/outdated (Windows: `winget`; macOS: `brew`; Linux: `apt/dnf/yum/apk/pacman`).
 
 Install a source toolchain (latest from `main`):
 
