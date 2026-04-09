@@ -18,6 +18,7 @@ Supported now:
 - `which`
 - `env` (`sh|zsh|fish|powershell`)
 - `doctor`
+- `doc` (open XGo spec / classfile / docs / demo / tutorial in browser)
 
 Backward-compatible aliases:
 
@@ -34,36 +35,17 @@ chmod +x ./bin/xgoup
 
 ## One-line install
 
-macOS / Linux (`curl`):
+**macOS / Linux**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.sh | bash
 ```
 
-macOS / Linux (`wget`):
+**Windows**
 
-```bash
-wget -qO- https://raw.githubusercontent.com/fanfeilong/xgoup/main/scripts/install.sh | bash
+```bat
+curl.exe -fsSL "https://github.com/fanfeilong/xgoup/releases/latest/download/xgoup-windows-amd64.zip" -o "%TEMP%\xgoup-win.zip" && tar -xf "%TEMP%\xgoup-win.zip" -C "%TEMP%" && "%TEMP%\xgoup.exe" self install -modify-path=true
 ```
-
-Windows (PowerShell) — download the release zip, extract `xgoup.exe`, then install into `%USERPROFILE%\.xgoup\bin`:
-
-```powershell
-$zip="$env:TEMP\xgoup-win.zip"; curl.exe -fsSL "https://github.com/fanfeilong/xgoup/releases/latest/download/xgoup-windows-amd64.zip" -o $zip
-Expand-Archive -Path $zip -DestinationPath $env:TEMP\xgoup-extract -Force
-& "$env:TEMP\xgoup-extract\xgoup.exe" self install -modify-path=true
-```
-
-Alternatively, if you already have `xgoup.exe` on disk (e.g. current directory):
-
-```powershell
-.\xgoup.exe self install -modify-path=true
-```
-
-Note:
-
-- `self install` requires at least one GitHub Release in the repo (or use `-zip` with a local zip in CI).
-- If your repo is private, unauthenticated `raw.githubusercontent.com` access may return `404`.
 
 Install a source toolchain (latest from `main`):
 

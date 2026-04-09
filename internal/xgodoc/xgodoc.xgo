@@ -1,0 +1,50 @@
+// Package xgodoc opens canonical XGo language documentation in the default browser.
+package xgodoc
+
+import (
+	"fmt"
+	"os/exec"
+	"runtime"
+)
+
+// DefaultRepo is the upstream XGo repository whose doc/ tree holds the language spec.
+const DefaultRepo = "goplus/xgo"
+
+// URLs returns stable links: language spec, classfile overview & spec, full docs index,
+// demo sources on GitHub, and the public tutorial site (annotated examples).
+func URLs(repo string) []string {
+	if repo == "" {
+		repo = DefaultRepo
+	}
+	base := "https://github.com/" + repo
+	return []string{
+		base + "/blob/main/doc/spec.md",
+		base + "/blob/main/doc/classfile.md",
+		base + "/blob/main/doc/classfile-spec.md",
+		base + "/blob/main/doc/docs.md",
+		base + "/tree/main/demo",
+		"https://tutorial.xgo.dev/",
+	}
+}
+
+// OpenBrowser opens each URL with the OS default handler (usually a browser).
+func OpenBrowser(urls []string) error {
+	for _, u := range urls {
+		if err := openOne(u); err != nil {
+			return fmt.Errorf("open %q: %w", u, err)
+		}
+	}
+	return nil
+}
+
+func openOne(url string) error {
+	switch runtime.GOOS {
+	case "darwin":
+		return exec.Command("open", url).Run()
+	case "windows":
+		// Avoid cmd parsing issues with & in URLs.
+		return exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Run()
+	default:
+		return exec.Command("xdg-open", url).Run()
+	}
+}

@@ -7,10 +7,10 @@ import (
 )
 
 type Paths struct {
-	Home      string
+	Home       string
 	Toolchains string
-	Metadata  string
-	Config    string
+	Metadata   string
+	Config     string
 }
 
 func Resolve() (Paths, error) {
@@ -51,4 +51,3 @@ func EnsureDirs(p Paths) error {
 	}
 	return nil
 }
-

@@ -14,6 +14,7 @@ import (
 	"github.com/fanfeilong/xgoup/internal/selfupdate"
 	"github.com/fanfeilong/xgoup/internal/toolchain"
 	"github.com/fanfeilong/xgoup/internal/userenv"
+	"github.com/fanfeilong/xgoup/internal/xgodoc"
 )
 
 printUsage := func() {
@@ -30,6 +31,7 @@ Usage:
   xgoup which [--toolchain <name>]
   xgoup env [--toolchain <name>] [--shell <sh|zsh|fish|powershell>]
   xgoup doctor
+  xgoup doc [--no-browser] [--repo <owner/name>]
   xgoup self install [--repo <owner/name>] [--version latest|vX.Y.Z] [--modify-path] [--zip <path>]
   xgoup self update
   xgoup self uninstall [--force]
@@ -339,6 +341,23 @@ case "doctor":
 		die(err)
 	}
 	fmt.Println "[xgoup] doctor: ok"
+	os.Exit 0
+case "doc":
+	fs := flag.NewFlagSet("doc", flag.ContinueOnError)
+	noBrowser := fs.Bool("no-browser", false, "")
+	repo := fs.String("repo", getenv("XGO_DOC_REPO", xgodoc.DefaultRepo), "")
+	_ = fs.Parse(rest)
+	urls := xgodoc.URLs(*repo)
+	if *noBrowser {
+		for _, u := range urls {
+			fmt.Println u
+		}
+		os.Exit 0
+	}
+	if err := xgodoc.OpenBrowser(urls); err != nil {
+		die(err)
+	}
+	fmt.Println "[xgoup] opened XGo spec, classfile docs, reference, demo, and tutorial"
 	os.Exit 0
 case "self":
 	if len(rest) == 0 {

@@ -111,6 +111,17 @@ Check prerequisites and manager state:
 - default toolchain validity
 - binary existence and executable bit
 
+### `xgoup doc`
+
+Open canonical **XGo** documentation in the default browser: language **spec** (`doc/spec.md`), **classfile** overview and **classfile-spec**, the consolidated **docs** index (`doc/docs.md`), the upstream **demo** tree on GitHub, and **[tutorial.xgo.dev](https://tutorial.xgo.dev/)** (annotated examples).
+
+Official spec sources live in the [`goplus/xgo` repository](https://github.com/goplus/xgo) under `doc/` (also includes `builtin.md`, topic guides, etc.).
+
+Options:
+
+- `--no-browser`: print URLs only (for remote/headless environments)
+- `--repo <owner/name>`: override the GitHub repo (default: `goplus/xgo`). Also read from env `XGO_DOC_REPO`.
+
 ### `xgoup self update`
 
 Update `xgoup` manager itself from release channel.

@@ -12,7 +12,7 @@ Shell installers (`scripts/install.sh`, `scripts/install.ps1`) remain thin wrapp
 
 ## xgo vs Go
 
-- **Entry**: `cmd/xgoup/*.xgo` is written in **XGo** and built with `xgo build`.
-- **Libraries**: `internal/*` are plain **Go** packages (`*.go`). They are shared libraries; the xgo toolchain transpiles the `.xgo` entrypoint only. Keeping `internal` as Go avoids tooling churn and keeps `go test ./...` / IDEs working.
+- **Entry**: `cmd/xgoup/main.xgo` is written in **XGo** and built with `xgo build`.
+- **Libraries**: `internal/*` are **XGo** sources (`*.xgo`). `xgo build` emits `xgo_autogen.go` per package (same pattern as the main package). Check in both `.xgo` and generated `xgo_autogen.go` so CI and `go test ./...` work without an extra codegen step when the repo is already generated.
 
-If you add new commands, extend `cmd/xgoup/main.xgo` and put reusable logic under `internal/`.
+If you add new commands, extend `cmd/xgoup/main.xgo` and put reusable logic under `internal/<pkg>/<pkg>.xgo`.
